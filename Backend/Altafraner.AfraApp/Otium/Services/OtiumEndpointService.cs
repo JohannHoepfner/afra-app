@@ -597,6 +597,12 @@ internal class OtiumEndpointService
                 return rates.Count > 0 ? (double?)rates.Average() : null;
             });
 
+        var allTerminRates = terminAttendanceRates.Values
+            .Where(r => r.HasValue)
+            .Select(r => r!.Value)
+            .ToList();
+        var durchschnittlicheAnwesenheit = allTerminRates.Count > 0 ? (double?)allTerminRates.Average() : null;
+
         return new ManagementOtiumView
         {
             Id = otium.Id,
@@ -617,6 +623,7 @@ internal class OtiumEndpointService
                     wiederholungAttendanceRates.GetValueOrDefault(r.Id))),
             MinKlasse = otium.MinKlasse,
             MaxKlasse = otium.MaxKlasse,
+            DurchschnittlicheAnwesenheit = durchschnittlicheAnwesenheit,
         };
     }
 
