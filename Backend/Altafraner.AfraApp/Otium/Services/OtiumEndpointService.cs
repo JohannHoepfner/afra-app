@@ -513,9 +513,9 @@ internal class OtiumEndpointService
     ///     Gets a single Otium
     /// </summary>
     /// <param name="otiumId">The ID of the Otium to get.</param>
-    public ManagementOtiumView GetOtium(Guid otiumId)
+    public async Task<ManagementOtiumView> GetOtiumAsync(Guid otiumId)
     {
-        var otium = _dbContext.Otia
+        var otium = await _dbContext.Otia
             .AsSplitQuery()
             .Include(o => o.Verantwortliche)
             .Include(o => o.Termine)
@@ -526,10 +526,76 @@ internal class OtiumEndpointService
             .Include(o => o.Wiederholungen.OrderBy(w => w.Wochentyp).ThenBy(w => w.Wochentyp).ThenBy(w => w.Block))
             .ThenInclude(t => t.Tutor)
             .Include(o => o.Kategorie)
-            .FirstOrDefault(o => o.Id == otiumId);
+            .FirstOrDefaultAsync(o => o.Id == otiumId);
 
         if (otium is null)
             throw new NotFoundException("Kein Otium mit dieser Id gefunden.");
+
+        // Compute enrollment counts and attendance rates for all termine
+        var terminIds = otium.Termine.Select(t => t.Id).ToList();
+
+        var enrollmentCounts = terminIds.Count > 0
+            ? await _dbContext.OtiaEinschreibungen
+                .Where(e => terminIds.Contains(e.Termin.Id))
+                .GroupBy(e => e.Termin.Id)
+                .Select(g => new { TerminId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.TerminId, g => g.Count)
+            : new Dictionary<Guid, int>();
+
+        var checkedTermine = otium.Termine
+            .Where(t => t.SindAnwesenheitenKontrolliert && !t.IstAbgesagt)
+            .Select(t => new { t.Id, BlockId = t.Block.Id })
+            .ToList();
+
+        var terminAttendanceRates = new Dictionary<Guid, double?>();
+        if (checkedTermine.Count > 0)
+        {
+            var checkedTerminIds = checkedTermine.Select(t => t.Id).ToList();
+            var terminBlockMap = checkedTermine.ToDictionary(t => t.Id, t => t.BlockId);
+            var checkedBlockIds = checkedTermine.Select(t => t.BlockId).ToList();
+
+            var enrolledStudents = await _dbContext.OtiaEinschreibungen
+                .Where(e => checkedTerminIds.Contains(e.Termin.Id))
+                .Select(e => new { TerminId = e.Termin.Id, StudentId = e.BetroffenePerson.Id })
+                .ToListAsync();
+
+            var anwesenheiten = await _dbContext.OtiaAnwesenheiten
+                .Where(a => checkedBlockIds.Contains(a.BlockId) &&
+                            a.Status == OtiumAnwesenheitsStatus.Anwesend)
+                .Select(a => new { a.StudentId, a.BlockId })
+                .ToListAsync();
+
+            var enrolledByTermin = enrolledStudents
+                .GroupBy(e => e.TerminId)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.StudentId).ToHashSet());
+
+            var anwesenheitByBlock = anwesenheiten
+                .GroupBy(a => a.BlockId)
+                .ToDictionary(g => g.Key, g => g.Select(a => a.StudentId).ToHashSet());
+
+            foreach (var termin in checkedTermine)
+            {
+                var enrolled = enrolledByTermin.GetValueOrDefault(termin.Id, []);
+                var anwesendInBlock = anwesenheitByBlock.GetValueOrDefault(termin.BlockId, []);
+                var anwesendCount = enrolled.Count(s => anwesendInBlock.Contains(s));
+                terminAttendanceRates[termin.Id] = enrolled.Count > 0
+                    ? (double)anwesendCount / enrolled.Count * 100
+                    : null;
+            }
+        }
+
+        var wiederholungAttendanceRates = otium.Wiederholungen.ToDictionary(
+            w => w.Id,
+            w =>
+            {
+                var rates = otium.Termine
+                    .Where(t => t.Wiederholung?.Id == w.Id && terminAttendanceRates.ContainsKey(t.Id))
+                    .Select(t => terminAttendanceRates[t.Id])
+                    .Where(r => r.HasValue)
+                    .Select(r => r!.Value)
+                    .ToList();
+                return rates.Count > 0 ? (double?)rates.Average() : null;
+            });
 
         return new ManagementOtiumView
         {
@@ -539,9 +605,16 @@ internal class OtiumEndpointService
             Kategorie = otium.Kategorie.Id,
             Verantwortliche = otium.Verantwortliche.Select(v => new PersonInfoMinimal(v)),
             Termine = otium.Termine.Select(t =>
-                new ManagementTerminView(t, _blockHelper.Get(t.Block.SchemaId)!.Bezeichnung)),
+                new ManagementTerminView(
+                    t,
+                    _blockHelper.Get(t.Block.SchemaId)!.Bezeichnung,
+                    enrollmentCounts.GetValueOrDefault(t.Id, 0),
+                    terminAttendanceRates.GetValueOrDefault(t.Id))),
             Wiederholungen = otium.Wiederholungen.Select(r =>
-                new ManagementWiederholungView(r, _blockHelper.Get(r.Block)!.Bezeichnung)),
+                new ManagementWiederholungView(
+                    r,
+                    _blockHelper.Get(r.Block)!.Bezeichnung,
+                    wiederholungAttendanceRates.GetValueOrDefault(r.Id))),
             MinKlasse = otium.MinKlasse,
             MaxKlasse = otium.MaxKlasse,
         };

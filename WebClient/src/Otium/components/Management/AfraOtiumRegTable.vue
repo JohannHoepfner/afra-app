@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { Button, Column, DataTable, Dialog, useDialog } from 'primevue';
+import { Button, Column, DataTable, Dialog, Tag, useDialog } from 'primevue';
 import { formatDate, formatDayOfWeek, formatTutor } from '@/helpers/formatters';
 import CreateWiederholungForm from '@/Otium/components/Management/CreateWiederholungForm.vue';
 import CancelWiederholungForm from '@/Otium/components/Management/CancelWiederholungForm.vue';
@@ -82,6 +82,23 @@ function edit(data) {
         <Column field="endDate" header="Bis">
             <template #body="slotProps">
                 {{ formatDate(new Date(slotProps.data.endDate)) }}
+            </template>
+        </Column>
+        <Column header="Ø Anwesenheit">
+            <template #body="{ data }">
+                <Tag
+                    v-if="data.durchschnittlicheAnwesenheit != null"
+                    :severity="
+                        data.durchschnittlicheAnwesenheit >= 80
+                            ? 'success'
+                            : data.durchschnittlicheAnwesenheit >= 50
+                              ? 'warn'
+                              : 'danger'
+                    "
+                >
+                    {{ Math.round(data.durchschnittlicheAnwesenheit) }}&thinsp;%
+                </Tag>
+                <span v-else class="text-surface-400">–</span>
             </template>
         </Column>
         <Column v-if="allowEdit" class="text-right afra-col-action">

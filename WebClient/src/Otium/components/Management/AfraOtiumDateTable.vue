@@ -1,5 +1,5 @@
 <script setup>
-import { Button, Column, DataTable, Dialog } from 'primevue';
+import { Button, Column, DataTable, Dialog, Tag } from 'primevue';
 import { formatDate, formatPerson } from '@/helpers/formatters';
 import { RouterLink } from 'vue-router';
 import { defineAsyncComponent, ref } from 'vue';
@@ -90,6 +90,23 @@ const create = (data) => {
                         {{ data.bezeichnung }}
                     </span>
                 </template>
+            </template>
+        </Column>
+        <Column header="Ø Anwesenheit">
+            <template #body="{ data }">
+                <Tag
+                    v-if="data.durchschnittlicheAnwesenheit != null"
+                    :severity="
+                        data.durchschnittlicheAnwesenheit >= 80
+                            ? 'success'
+                            : data.durchschnittlicheAnwesenheit >= 50
+                              ? 'warn'
+                              : 'danger'
+                    "
+                >
+                    {{ Math.round(data.durchschnittlicheAnwesenheit) }}&thinsp;%
+                </Tag>
+                <span v-else class="text-surface-400">–</span>
             </template>
         </Column>
         <Column v-if="allowEdit" class="text-right afra-col-action">
