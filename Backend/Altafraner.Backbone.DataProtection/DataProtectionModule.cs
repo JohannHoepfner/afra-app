@@ -28,9 +28,9 @@ public class DataProtectionModule<T> : IModule where T : DbContext, IDataProtect
                 .PersistKeysToDbContext<T>()
                 .ProtectKeysWithCertificate(dataProtectionCert);
         }
-        catch (CryptographicException exception)
+        catch (CryptographicException)
         {
-            Console.WriteLine($"Could not load certificate for Domain Protection {exception.Message}");
+            Console.WriteLine("Could not load certificate for Data Protection. Exiting.");
             Environment.Exit(1);
         }
     }

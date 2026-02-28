@@ -32,6 +32,7 @@ public class CookieAuthenticationModule : IModule
                 options.ExpireTimeSpan = settings.CookieTimeout;
                 options.Cookie.SameSite = settings.SameSiteMode;
                 options.Cookie.SecurePolicy = settings.SecurePolicy;
+                options.Cookie.HttpOnly = true;
                 options.SlidingExpiration = settings.SlidingExpiration;
             });
         services.AddScoped<IAuthenticationLifetimeService, AuthenticationLifetimeService>();

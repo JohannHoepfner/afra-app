@@ -16,7 +16,7 @@ import { computed } from 'vue';
 import { useOtiumStore } from '@/Otium/stores/otium.js';
 import { findPath } from '@/helpers/tree.js';
 import AfraKategorieTag from '@/Otium/components/Shared/AfraKategorieTag.vue';
-import { marked } from 'marked';
+import { convertMarkdownToHtml } from '@/composables/markdown';
 import AfraOtiumAnwesenheit from '@/Otium/components/Shared/AfraOtiumAnwesenheit.vue';
 
 const props = defineProps({
@@ -68,7 +68,7 @@ const formatedEnrollments = computed(() => {
 
         return {
             ...week,
-            messageHtml: week.message ? marked(week.message, { sanitize: true }) : null,
+            messageHtml: week.message ? convertMarkdownToHtml(week.message) : null,
             einschreibungen: result,
         };
     });

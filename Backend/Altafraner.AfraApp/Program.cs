@@ -61,11 +61,11 @@ if (!app.Environment.IsDevelopment())
             {
                 case ArgumentException:
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsJsonAsync(new { error = exception.Message });
+                    await context.Response.WriteAsJsonAsync(new { error = "Bad request" });
                     return;
                 case NotFoundException:
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
-                    await context.Response.WriteAsJsonAsync(new { error = exception.Message });
+                    await context.Response.WriteAsJsonAsync(new { error = "Not found" });
                     return;
                 default:
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
