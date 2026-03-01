@@ -92,19 +92,10 @@ const create = (data) => {
                 </template>
             </template>
         </Column>
-        <Column header="Anwesenheit">
+        <Column header="Anwesende">
             <template #body="{ data }">
-                <Tag
-                    v-if="data.anzahlAnwesend != null"
-                    :severity="
-                        data.durchschnittlicheAnwesenheit >= 80
-                            ? 'success'
-                            : data.durchschnittlicheAnwesenheit >= 50
-                              ? 'warn'
-                              : 'danger'
-                    "
-                >
-                    {{ data.anzahlAnwesend }}&thinsp;/&thinsp;{{ data.anzahlEinschreibungen }}
+                <Tag v-if="data.anzahlAnwesend != null" severity="secondary">
+                    {{ data.anzahlAnwesend }}
                 </Tag>
                 <span v-else class="text-surface-400">–</span>
             </template>

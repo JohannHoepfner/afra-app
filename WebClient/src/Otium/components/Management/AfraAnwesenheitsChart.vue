@@ -8,25 +8,22 @@ const props = defineProps({
     },
 });
 
-// Build time-series: group by date, average attendance per day
+// Build time-series: group by date, sum attendees per day
 const chartData = computed(() => {
     const relevant = props.termine.filter(
-        (t) => t.durchschnittlicheAnwesenheit != null && !t.istAbgesagt,
+        (t) => t.anzahlAnwesend != null && !t.istAbgesagt,
     );
     if (relevant.length === 0) return [];
 
     const byDate = new Map();
     for (const t of relevant) {
         const d = t.datum;
-        if (!byDate.has(d)) byDate.set(d, []);
-        byDate.get(d).push(t.durchschnittlicheAnwesenheit);
+        if (!byDate.has(d)) byDate.set(d, 0);
+        byDate.set(d, byDate.get(d) + t.anzahlAnwesend);
     }
 
     return [...byDate.entries()]
-        .map(([date, rates]) => ({
-            date,
-            rate: rates.reduce((a, b) => a + b, 0) / rates.length,
-        }))
+        .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 });
 
@@ -42,19 +39,36 @@ const padBottom = 40;
 const plotW = W - padLeft - padRight;
 const plotH = H - padTop - padBottom;
 
+// Compute a "nice" Y-axis maximum and tick values from the actual data
+const yNiceStep = computed(() => {
+    const max = Math.max(...chartData.value.map((d) => d.count), 1);
+    return max <= 5 ? 1 : max <= 10 ? 2 : max <= 20 ? 5 : max <= 50 ? 10 : max <= 100 ? 20 : 50;
+});
+
+const yMax = computed(() => {
+    const max = Math.max(...chartData.value.map((d) => d.count), 1);
+    return Math.ceil(max / yNiceStep.value) * yNiceStep.value;
+});
+
+const yTicks = computed(() => {
+    const ticks = [];
+    for (let v = 0; v <= yMax.value; v += yNiceStep.value) ticks.push(v);
+    return ticks;
+});
+
 const xPos = (i) => {
     const n = chartData.value.length;
     if (n <= 1) return padLeft + plotW / 2;
     return padLeft + (i / (n - 1)) * plotW;
 };
 
-const yPos = (val) => padTop + plotH - (val / 100) * plotH;
+const yPos = (val) => padTop + plotH - (val / yMax.value) * plotH;
 
 const points = computed(() =>
     chartData.value.map((d, i) => ({
         ...d,
         cx: xPos(i),
-        cy: yPos(d.rate),
+        cy: yPos(d.count),
     })),
 );
 
@@ -77,8 +91,6 @@ const areaPath = computed(() => {
     const end = `L ${points.value[points.value.length - 1].cx} ${bottom} Z`;
     return `${start} ${line} ${end}`;
 });
-
-const yTicks = [0, 25, 50, 75, 100];
 
 const xTickIndices = computed(() => {
     const n = chartData.value.length;
@@ -132,7 +144,7 @@ function formatShortDate(dateStr) {
                 text-anchor="end"
                 font-size="11"
                 fill="var(--p-text-muted-color)"
-            >{{ tick }}%</text>
+            >{{ tick }}</text>
 
             <!-- Area fill -->
             <path v-if="areaPath" :d="areaPath" fill="url(#afra-area-grad)" />

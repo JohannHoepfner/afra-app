@@ -84,19 +84,10 @@ function edit(data) {
                 {{ formatDate(new Date(slotProps.data.endDate)) }}
             </template>
         </Column>
-        <Column header="Ø Anwesenheit">
+        <Column header="Anwesende">
             <template #body="{ data }">
-                <Tag
-                    v-if="data.anzahlAnwesend != null"
-                    :severity="
-                        data.durchschnittlicheAnwesenheit >= 80
-                            ? 'success'
-                            : data.durchschnittlicheAnwesenheit >= 50
-                              ? 'warn'
-                              : 'danger'
-                    "
-                >
-                    {{ data.anzahlAnwesend }}&thinsp;/&thinsp;{{ data.anzahlGepruefteEinschreibungen }}
+                <Tag v-if="data.anzahlAnwesend != null" severity="secondary">
+                    {{ data.anzahlAnwesend }}
                 </Tag>
                 <span v-else class="text-surface-400">–</span>
             </template>
