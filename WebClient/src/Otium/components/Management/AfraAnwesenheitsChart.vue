@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     termine: {
@@ -90,17 +90,6 @@ const xTickIndices = computed(() => {
     return indices;
 });
 
-const hoveredIndex = ref(null);
-const tooltipPoint = computed(() =>
-    hoveredIndex.value != null ? points.value[hoveredIndex.value] : null,
-);
-
-// Tooltip box: flip to left side if near right edge
-const tooltipX = computed(() => {
-    if (!tooltipPoint.value) return 0;
-    return tooltipPoint.value.cx + 80 > W ? tooltipPoint.value.cx - 80 : tooltipPoint.value.cx + 8;
-});
-
 function formatShortDate(dateStr) {
     // dateStr is DateOnly from C# serialized as "YYYY-MM-DD"; take only the date part
     const d = new Date(String(dateStr).slice(0, 10) + 'T00:00:00');
@@ -109,11 +98,11 @@ function formatShortDate(dateStr) {
 </script>
 
 <template>
-    <div v-if="hasData" class="w-full overflow-x-auto">
+    <div v-if="hasData" class="overflow-hidden">
         <svg
             :viewBox="`0 0 ${W} ${H}`"
             xmlns="http://www.w3.org/2000/svg"
-            style="width: 100%; max-height: 220px; min-width: 280px"
+            style="width: 100%; max-height: 220px"
         >
             <defs>
                 <linearGradient id="afra-area-grad" x1="0" y1="0" x2="0" y2="1">
@@ -165,13 +154,10 @@ function formatShortDate(dateStr) {
                 :key="i"
                 :cx="p.cx"
                 :cy="p.cy"
-                :r="hoveredIndex === i ? 5 : 3.5"
+                r="3.5"
                 fill="var(--p-primary-color)"
                 stroke="var(--p-surface-0)"
                 stroke-width="1.5"
-                style="cursor: pointer"
-                @mouseenter="hoveredIndex = i"
-                @mouseleave="hoveredIndex = null"
             />
 
             <!-- X-axis date labels -->
@@ -184,46 +170,6 @@ function formatShortDate(dateStr) {
                 font-size="10"
                 fill="var(--p-text-muted-color)"
             >{{ formatShortDate(chartData[i].date) }}</text>
-
-            <!-- Tooltip -->
-            <g v-if="tooltipPoint">
-                <line
-                    :x1="tooltipPoint.cx"
-                    :y1="padTop"
-                    :x2="tooltipPoint.cx"
-                    :y2="padTop + plotH"
-                    stroke="var(--p-primary-color)"
-                    stroke-width="1"
-                    stroke-dasharray="3 3"
-                    opacity="0.5"
-                />
-                <rect
-                    :x="tooltipX"
-                    :y="tooltipPoint.cy - 24"
-                    width="68"
-                    height="36"
-                    rx="5"
-                    fill="var(--p-surface-0)"
-                    stroke="var(--p-surface-200)"
-                    stroke-width="1"
-                    filter="drop-shadow(0 2px 6px rgba(0,0,0,0.10))"
-                />
-                <text
-                    :x="tooltipX + 34"
-                    :y="tooltipPoint.cy - 9"
-                    text-anchor="middle"
-                    font-size="10"
-                    fill="var(--p-text-muted-color)"
-                >{{ formatShortDate(tooltipPoint.date) }}</text>
-                <text
-                    :x="tooltipX + 34"
-                    :y="tooltipPoint.cy + 7"
-                    text-anchor="middle"
-                    font-size="13"
-                    font-weight="600"
-                    fill="var(--p-primary-color)"
-                >{{ Math.round(tooltipPoint.rate) }}%</text>
-            </g>
         </svg>
     </div>
     <p v-else class="text-surface-400 text-sm italic">Noch keine Anwesenheitsdaten vorhanden.</p>

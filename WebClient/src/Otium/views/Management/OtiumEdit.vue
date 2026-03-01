@@ -5,7 +5,6 @@ import {
     AccordionHeader,
     AccordionPanel,
     InputText,
-    Tag,
     Textarea,
     useToast,
 } from 'primevue';
@@ -407,21 +406,6 @@ setup();
                         maxlength="500"
                         rows="2"
                     />
-                </template>
-            </GridEditRow>
-            <GridEditRow v-if="otium.durchschnittlicheAnwesenheit != null" header="Ø Anwesenheit" hide-edit>
-                <template #body>
-                    <Tag
-                        :severity="
-                            otium.durchschnittlicheAnwesenheit >= 80
-                                ? 'success'
-                                : otium.durchschnittlicheAnwesenheit >= 50
-                                  ? 'warn'
-                                  : 'danger'
-                        "
-                    >
-                        {{ Math.round(otium.durchschnittlicheAnwesenheit) }}&thinsp;%
-                    </Tag>
                 </template>
             </GridEditRow>
         </Grid>
