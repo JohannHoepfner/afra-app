@@ -105,13 +105,13 @@ public record ManagementWiederholungView
     public double? DurchschnittlicheAnwesenheit { get; set; }
 
     /// <summary>
-    ///     The total number of enrolled students who were marked as present across all checked Termine.
+    ///     The average number of enrolled students who were marked as present per checked Termin of this Wiederholung.
     ///     Null if no Termine have had their attendance checked yet.
     /// </summary>
     public int? AnzahlAnwesend { get; set; }
 
     /// <summary>
-    ///     The total number of enrolled students across all checked Termine of this Wiederholung.
+    ///     The average number of enrolled students per checked Termin of this Wiederholung.
     ///     Null if no Termine have had their attendance checked yet.
     /// </summary>
     public int? AnzahlGepruefteEinschreibungen { get; set; }

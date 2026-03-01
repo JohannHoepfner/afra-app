@@ -567,12 +567,14 @@ internal class OtiumEndpointService
                     .Select(t => terminAttendanceCounts[t.Id])
                     .ToList();
                 if (counts.Count == 0) return (Rate: (double?)null, Anwesend: (int?)null, Eingeschrieben: (int?)null);
-                var totalAnwesend = counts.Sum(c => c.Anwesend);
-                var totalEingeschrieben = counts.Sum(c => c.Eingeschrieben);
+                var sumAnwesend = counts.Sum(c => (double)c.Anwesend);
+                var sumEingeschrieben = counts.Sum(c => (double)c.Eingeschrieben);
+                var avgAnwesend = sumAnwesend / counts.Count;
+                var avgEingeschrieben = sumEingeschrieben / counts.Count;
                 return (
-                    Rate: totalEingeschrieben > 0 ? (double?)(totalAnwesend * 100.0 / totalEingeschrieben) : null,
-                    Anwesend: (int?)totalAnwesend,
-                    Eingeschrieben: (int?)totalEingeschrieben
+                    Rate: avgEingeschrieben > 0 ? (double?)(avgAnwesend * 100.0 / avgEingeschrieben) : null,
+                    Anwesend: (int?)Math.Round(avgAnwesend, MidpointRounding.AwayFromZero),
+                    Eingeschrieben: (int?)Math.Round(avgEingeschrieben, MidpointRounding.AwayFromZero)
                 );
             });
 
