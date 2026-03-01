@@ -23,7 +23,8 @@ public record ManagementWiederholungView
     /// </summary>
     [SetsRequiredMembers]
     public ManagementWiederholungView(OtiumWiederholung dbWiederholung, string block,
-        double? durchschnittlicheAnwesenheit = null)
+        double? durchschnittlicheAnwesenheit = null, int? anzahlAnwesend = null,
+        int? anzahlGepruefteEinschreibungen = null)
     {
         Id = dbWiederholung.Id;
         OtiumId = dbWiederholung.Otium.Id;
@@ -37,6 +38,8 @@ public record ManagementWiederholungView
         Block = block;
         MaxEinschreibungen = dbWiederholung.MaxEinschreibungen;
         DurchschnittlicheAnwesenheit = durchschnittlicheAnwesenheit;
+        AnzahlAnwesend = anzahlAnwesend;
+        AnzahlGepruefteEinschreibungen = anzahlGepruefteEinschreibungen;
     }
 
     /// <summary>
@@ -100,4 +103,16 @@ public record ManagementWiederholungView
     ///     Null if no Termine have had their attendance checked yet.
     /// </summary>
     public double? DurchschnittlicheAnwesenheit { get; set; }
+
+    /// <summary>
+    ///     The total number of enrolled students who were marked as present across all checked Termine.
+    ///     Null if no Termine have had their attendance checked yet.
+    /// </summary>
+    public int? AnzahlAnwesend { get; set; }
+
+    /// <summary>
+    ///     The total number of enrolled students across all checked Termine of this Wiederholung.
+    ///     Null if no Termine have had their attendance checked yet.
+    /// </summary>
+    public int? AnzahlGepruefteEinschreibungen { get; set; }
 }

@@ -58,6 +58,18 @@ public interface IAttendanceService
         Guid personId);
 
     /// <summary>
+    ///     Gets the number of present and enrolled students for each of the given Termine in a single batch.
+    ///     Only Termine that exist in the database are included in the result.
+    /// </summary>
+    /// <param name="terminIds">The IDs of the Termine to compute counts for.</param>
+    /// <returns>
+    ///     A dictionary keyed by TerminId. Each value contains the number of enrolled students that were marked
+    ///     as present (<c>Anwesend</c>) and the total number of enrolled students (<c>Eingeschrieben</c>).
+    /// </returns>
+    Task<Dictionary<Guid, (int Anwesend, int Eingeschrieben)>> GetAttendanceCountsForTermineAsync(
+        IEnumerable<Guid> terminIds);
+
+    /// <summary>
     ///     Sets the attendance status for a specific enrollment
     /// </summary>
     /// <param name="enrollmentId">The enrollment to set the status for</param>

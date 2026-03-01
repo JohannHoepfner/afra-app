@@ -87,7 +87,7 @@ function edit(data) {
         <Column header="Ø Anwesenheit">
             <template #body="{ data }">
                 <Tag
-                    v-if="data.durchschnittlicheAnwesenheit != null"
+                    v-if="data.anzahlAnwesend != null"
                     :severity="
                         data.durchschnittlicheAnwesenheit >= 80
                             ? 'success'
@@ -96,7 +96,7 @@ function edit(data) {
                               : 'danger'
                     "
                 >
-                    {{ Math.round(data.durchschnittlicheAnwesenheit) }}&thinsp;%
+                    {{ data.anzahlAnwesend }}&thinsp;/&thinsp;{{ data.anzahlGepruefteEinschreibungen }}
                 </Tag>
                 <span v-else class="text-surface-400">–</span>
             </template>

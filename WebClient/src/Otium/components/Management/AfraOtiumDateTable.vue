@@ -92,10 +92,10 @@ const create = (data) => {
                 </template>
             </template>
         </Column>
-        <Column header="Ø Anwesenheit">
+        <Column header="Anwesenheit">
             <template #body="{ data }">
                 <Tag
-                    v-if="data.durchschnittlicheAnwesenheit != null"
+                    v-if="data.anzahlAnwesend != null"
                     :severity="
                         data.durchschnittlicheAnwesenheit >= 80
                             ? 'success'
@@ -104,7 +104,7 @@ const create = (data) => {
                               : 'danger'
                     "
                 >
-                    {{ Math.round(data.durchschnittlicheAnwesenheit) }}&thinsp;%
+                    {{ data.anzahlAnwesend }}&thinsp;/&thinsp;{{ data.anzahlEinschreibungen }}
                 </Tag>
                 <span v-else class="text-surface-400">–</span>
             </template>
