@@ -8,7 +8,7 @@ const props = defineProps({
     },
 });
 
-// Build time-series: group by date, sum attendees per day
+// Build time-series: group by date, average attendees per day
 const chartData = computed(() => {
     const relevant = props.termine.filter(
         (t) => t.anzahlAnwesend != null && !t.istAbgesagt,
@@ -18,12 +18,15 @@ const chartData = computed(() => {
     const byDate = new Map();
     for (const t of relevant) {
         const d = t.datum;
-        if (!byDate.has(d)) byDate.set(d, 0);
-        byDate.set(d, byDate.get(d) + t.anzahlAnwesend);
+        if (!byDate.has(d)) byDate.set(d, []);
+        byDate.get(d).push(t.anzahlAnwesend);
     }
 
     return [...byDate.entries()]
-        .map(([date, count]) => ({ date, count }))
+        .map(([date, counts]) => ({
+            date,
+            count: counts.reduce((a, b) => a + b, 0) / counts.length,
+        }))
         .sort((a, b) => a.date.localeCompare(b.date));
 });
 
