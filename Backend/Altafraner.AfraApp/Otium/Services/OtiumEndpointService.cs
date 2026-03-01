@@ -551,23 +551,35 @@ internal class OtiumEndpointService
         if (checkedTermine.Count > 0)
         {
             var checkedTerminIds = checkedTermine.Select(t => t.Id).ToList();
-            var terminBlockMap = checkedTermine.ToDictionary(t => t.Id, t => t.BlockId);
-            var checkedBlockIds = checkedTermine.Select(t => t.BlockId).ToList();
+
+            // Fetch block IDs directly from the DB to avoid relying on navigation properties
+            // that may not be populated reliably under AsNoTracking with ordered includes.
+            // EF Core translates t.Block.Id to the FK column (no JOIN) in a DB query context.
+            var terminBlockIds = await _dbContext.OtiaTermine
+                .Where(t => checkedTerminIds.Contains(t.Id))
+                .Select(t => new { TerminId = t.Id, BlockId = t.Block.Id })
+                .ToDictionaryAsync(t => t.TerminId, t => t.BlockId);
+
+            var checkedBlockIds = terminBlockIds.Values.Distinct().ToList();
 
             var enrolledStudents = await _dbContext.OtiaEinschreibungen
                 .Where(e => checkedTerminIds.Contains(e.Termin.Id))
                 .Select(e => new { TerminId = e.Termin.Id, StudentId = e.BetroffenePerson.Id })
                 .ToListAsync();
 
-            var anwesenheiten = await _dbContext.OtiaAnwesenheiten
-                .Where(a => checkedBlockIds.Contains(a.BlockId) &&
-                            a.Status == OtiumAnwesenheitsStatus.Anwesend)
-                .Select(a => new { a.StudentId, a.BlockId })
-                .ToListAsync();
-
             var enrolledByTermin = enrolledStudents
                 .GroupBy(e => e.TerminId)
                 .ToDictionary(g => g.Key, g => g.Select(e => e.StudentId).ToHashSet());
+
+            // Scope attendance query to enrolled students only, mirroring GetAttendanceForTerminAsync.
+            var allEnrolledStudentIds = enrolledStudents.Select(e => e.StudentId).Distinct().ToList();
+
+            var anwesenheiten = await _dbContext.OtiaAnwesenheiten
+                .Where(a => checkedBlockIds.Contains(a.BlockId) &&
+                            allEnrolledStudentIds.Contains(a.StudentId) &&
+                            a.Status == OtiumAnwesenheitsStatus.Anwesend)
+                .Select(a => new { a.StudentId, a.BlockId })
+                .ToListAsync();
 
             var anwesenheitByBlock = anwesenheiten
                 .GroupBy(a => a.BlockId)
@@ -575,8 +587,10 @@ internal class OtiumEndpointService
 
             foreach (var termin in checkedTermine)
             {
+                if (!terminBlockIds.TryGetValue(termin.Id, out var blockId))
+                    continue;
                 var enrolled = enrolledByTermin.GetValueOrDefault(termin.Id, []);
-                var anwesendInBlock = anwesenheitByBlock.GetValueOrDefault(termin.BlockId, []);
+                var anwesendInBlock = anwesenheitByBlock.GetValueOrDefault(blockId, []);
                 var anwesendCount = enrolled.Count(s => anwesendInBlock.Contains(s));
                 terminAttendanceRates[termin.Id] = enrolled.Count > 0
                     ? (double)anwesendCount / enrolled.Count * 100
