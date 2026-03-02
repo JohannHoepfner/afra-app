@@ -22,6 +22,9 @@ public static class Enrollment
         );
         group.MapGet("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor) => svc.GetKatalog(await userAccessor.GetUserAsync()));
         group.MapGet("/einschreibungen", GetEnrollmentsAsync);
+
+        app.MapGet("/sus/dashboard", GetDashboardEnrollmentsAsync)
+            .RequireAuthorization(AuthorizationPolicies.StudentOnly);
     }
 
     ///
@@ -37,5 +40,12 @@ public static class Enrollment
         var slots = einwahlZeitraum.Slots.Select(s => s.Id).ToArray();
 
         return Results.Ok(await svc.GetEnrollment(user, slots));
+    }
+
+    private static async Task<IResult> GetDashboardEnrollmentsAsync(ProfundumEnrollmentService svc,
+        UserAccessor userAccessor)
+    {
+        var user = await userAccessor.GetUserAsync();
+        return Results.Ok(await svc.GetDashboardEnrollmentsAsync(user));
     }
 }

@@ -339,4 +339,29 @@ internal class ProfundumEnrollmentService
                     .Select(pe => new DTOProfundumDefinition(pe.ProfundumInstanz!.Profundum))
                     .First());
     }
+
+    /// <summary>
+    ///     Returns all profundum enrollments for a student, for display on the dashboard.
+    /// </summary>
+    public async Task<IEnumerable<DashboardProfundumEntry>> GetDashboardEnrollmentsAsync(Models_Person student)
+    {
+        return await _dbContext.ProfundaEinschreibungen
+            .Where(pe => pe.BetroffenePerson.Id == student.Id)
+            .Where(pe => pe.ProfundumInstanz != null)
+            .Include(pe => pe.ProfundumInstanz!)
+            .ThenInclude(pi => pi.Profundum)
+            .Include(pe => pe.Slot)
+            .OrderBy(pe => pe.Slot.Jahr)
+            .ThenBy(pe => pe.Slot.Quartal)
+            .ThenBy(pe => pe.Slot.Wochentag)
+            .Select(pe => new DashboardProfundumEntry
+            {
+                Jahr = pe.Slot.Jahr,
+                Quartal = pe.Slot.Quartal,
+                Wochentag = pe.Slot.Wochentag,
+                Bezeichnung = pe.ProfundumInstanz!.Profundum.Bezeichnung,
+                Ort = pe.ProfundumInstanz!.Ort,
+            })
+            .ToArrayAsync();
+    }
 }
