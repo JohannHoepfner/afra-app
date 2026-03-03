@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Altafraner.AfraApp.IntegrationTests.Infrastructure;
 
 namespace Altafraner.AfraApp.IntegrationTests.Tests;
