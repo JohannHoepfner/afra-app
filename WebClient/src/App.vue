@@ -121,7 +121,7 @@ const logo = computed(() => (isDark().value ? wappenDark : wappenLight));
 .impersonation-border {
     position: fixed;
     inset: 0;
-    border: 4px solid #ef4444;
+    border: 20px solid #ef4444;
     pointer-events: none;
     z-index: 9999;
 }
