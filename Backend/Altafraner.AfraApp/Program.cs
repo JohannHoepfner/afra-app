@@ -81,3 +81,5 @@ if (app.Environment.IsDevelopment()) app.MapControllers();
 await app.WarmupAltafranerBackbone();
 
 app.Run();
+
+public partial class Program { }
