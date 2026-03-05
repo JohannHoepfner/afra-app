@@ -43,9 +43,9 @@ internal class ProfundumMatchingService
             .Where(e => !e.IsFixed)
             .ExecuteDeleteAsync();
 
-        var slots = _dbContext.ProfundaSlots.ToArray();
-        var fixEinschreibungen = _dbContext.ProfundaEinschreibungen
-            .Where(e => e.IsFixed).ToArray();
+        var slots = await _dbContext.ProfundaSlots.ToArrayAsync();
+        var fixEinschreibungen = await _dbContext.ProfundaEinschreibungen
+            .Where(e => e.IsFixed).ToArrayAsync();
         var angebote = (await _dbContext.ProfundaInstanzen
                 .Include(pi => pi.Slots).ThenInclude(s => s.EinwahlZeitraum)
                 .Include(pi => pi.Profundum)
@@ -58,7 +58,7 @@ internal class ProfundumMatchingService
             .Include(b => b.ProfundumInstanz).ThenInclude(pi => pi.Profundum).ThenInclude(p => p.Kategorie)
             .Where(b => angeboteList.Contains(b.ProfundumInstanz))
             .ToArrayAsync();
-        var students = _dbContext.Personen.Where(p => p.Rolle == Rolle.Mittelstufe).ToArray();
+        var students = await _dbContext.Personen.Where(p => p.Rolle == Rolle.Mittelstufe).ToArrayAsync();
 
         if (!_profundumConfiguration.Value.DeterministicMatching)
         {

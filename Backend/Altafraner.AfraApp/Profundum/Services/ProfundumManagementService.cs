@@ -49,6 +49,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumEinwahlZeitraum[]> GetEinwahlZeiträumeAsync()
     {
         return _dbContext.ProfundumEinwahlZeitraeume
+            .AsNoTracking()
             .Select(e => new DTOProfundumEinwahlZeitraum(e))
             .ToArrayAsync();
     }
@@ -77,6 +78,7 @@ internal class ProfundumManagementService
     public async Task<DTOProfundumSlot[]> GetSlotsAsync()
     {
         return (await _dbContext.ProfundaSlots
+            .AsNoTracking()
             .Include(s => s.EinwahlZeitraum)
             .ToArrayAsync())
             .Order(new ProfundumSlotComparer())
@@ -176,7 +178,7 @@ internal class ProfundumManagementService
 
     public Task<DTOProfundumKategorie[]> GetKategorienAsync()
     {
-        return _dbContext.ProfundaKategorien.Select(k => new DTOProfundumKategorie(k)).ToArrayAsync();
+        return _dbContext.ProfundaKategorien.AsNoTracking().Select(k => new DTOProfundumKategorie(k)).ToArrayAsync();
     }
 
     public async Task<ProfundumDefinition> CreateProfundumAsync(DTOProfundumDefinitionCreation dtoProfundum)
@@ -257,6 +259,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumDefinition[]> GetProfundaAsync()
     {
         return _dbContext.Profunda
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Kategorie)
             .Include(p => p.Dependencies)
@@ -269,6 +272,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumDefinition?> GetProfundumAsync(Guid profundumId)
     {
         return _dbContext.Profunda
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Kategorie)
             .Include(p => p.Dependencies)
@@ -313,6 +317,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumInstanz[]> GetInstanzenAsync()
     {
         return _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .AsSingleQuery()
             .Include(p => p.Verantwortliche)
             .Include(i => i.Profundum).ThenInclude(p => p.Dependencies)
@@ -329,6 +334,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumInstanz?> GetInstanzAsync(Guid instanzId)
     {
         return _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .AsSingleQuery()
             .Include(p => p.Verantwortliche)
             .Include(i => i.Profundum).ThenInclude(p => p.Dependencies)

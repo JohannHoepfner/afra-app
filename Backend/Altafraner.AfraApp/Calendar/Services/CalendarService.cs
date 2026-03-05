@@ -46,8 +46,7 @@ public class CalendarService
     /// <param name="user">The person to delete the subscriptions for</param>
     public async Task DeleteAllCalendarSubscriptionAsync(Person user)
     {
-        _dbContext.CalendarSubscriptions.Where(s => s.BetroffenePerson.Id == user.Id).ExecuteDelete();
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.CalendarSubscriptions.Where(s => s.BetroffenePerson.Id == user.Id).ExecuteDeleteAsync();
     }
 
     /// <summary>

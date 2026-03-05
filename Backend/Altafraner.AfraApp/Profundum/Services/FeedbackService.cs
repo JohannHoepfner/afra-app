@@ -59,6 +59,7 @@ internal sealed class FeedbackService
     {
         var anker = await _ankerService.GetAnker(instanzId);
         var bewertungen = await _dbContext.ProfundumFeedbackEntries
+            .AsNoTracking()
             .Where(e => e.InstanzId == instanzId && e.BetroffenePersonId == studentId)
             .ToArrayAsync();
 
@@ -76,12 +77,15 @@ internal sealed class FeedbackService
     public async IAsyncEnumerable<(ProfundumInstanz instanz, FeedbackStatus status)> GetFeedbackStatus()
     {
         var instances = await _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .Include(e => e.Einschreibungen)
             .ThenInclude(e => e.BetroffenePerson)
             .Where(p => p.MaxEinschreibungen != null && p.MaxEinschreibungen != 0)
             .ToListAsync();
 
-        var feedback = await _dbContext.ProfundumFeedbackEntries.Select(e => new { e.BetroffenePersonId, e.InstanzId })
+        var feedback = await _dbContext.ProfundumFeedbackEntries
+            .AsNoTracking()
+            .Select(e => new { e.BetroffenePersonId, e.InstanzId })
             .Distinct()
             .ToArrayAsync();
 

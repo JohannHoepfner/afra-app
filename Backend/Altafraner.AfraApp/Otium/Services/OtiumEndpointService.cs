@@ -324,6 +324,7 @@ internal class OtiumEndpointService
             .ThenBy(s => s.LastName);
 
         var menteesEnrollments = await _dbContext.OtiaEinschreibungen
+            .AsNoTracking()
             .Where(e => mentees.Contains(e.BetroffenePerson))
             .Where(e => e.Termin.Block.Schultag.Datum >= startDate && e.Termin.Block.Schultag.Datum < endDate)
             .Include(p => p.Termin)
@@ -336,6 +337,7 @@ internal class OtiumEndpointService
             .ToDictionaryAsync(e => e.Key, e => e.AsEnumerable());
 
         var schultage = await _dbContext.Schultage
+            .AsNoTracking()
             .Include(s => s.Blocks)
             .Where(s => s.Datum >= startDate && s.Datum < endDate)
             .ToListAsync();
@@ -353,6 +355,7 @@ internal class OtiumEndpointService
         List<LehrerTerminPreview> terminPreviews = [];
 
         var termine = await _dbContext.OtiaTermine
+            .AsNoTracking()
             .Include(t => t.Otium)
             .Include(t => t.Block)
             .ThenInclude(b => b.Schultag)
@@ -363,13 +366,32 @@ internal class OtiumEndpointService
                         t.Block.Schultag.Datum < endDate)
             .ToListAsync();
 
+        // Batch enrollment counts for all termine with a cap in a single query
+        var terminIdsWithCap = termine.Where(t => t.MaxEinschreibungen.HasValue).Select(t => t.Id).ToHashSet();
+        var enrollmentCounts = terminIdsWithCap.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await _dbContext.OtiaEinschreibungen
+                .AsNoTracking()
+                .Where(e => terminIdsWithCap.Contains(e.Termin.Id))
+                .GroupBy(e => e.Termin.Id)
+                .ToDictionaryAsync(g => g.Key, g => g.Count());
+
         foreach (var termin in termine)
+        {
+            int? loadPercent = null;
+            if (termin.MaxEinschreibungen.HasValue)
+            {
+                var count = enrollmentCounts.GetValueOrDefault(termin.Id, 0);
+                loadPercent = (int)Math.Round((double)count / termin.MaxEinschreibungen.Value * 100);
+            }
+
             terminPreviews.Add(
                 new LehrerTerminPreview(termin.Id,
                     termin.OverrideBezeichnung != null ? termin.OverrideBezeichnung : termin.Bezeichnung, termin.Ort,
-                    await _enrollmentService.GetLoadPercent(termin), termin.Block.Schultag.Datum,
+                    loadPercent, termin.Block.Schultag.Datum,
                     _blockHelper.Get(termin.Block.SchemaId)!.Bezeichnung)
             );
+        }
 
         return new LehrerUebersicht(terminPreviews, menteePreviews);
 
@@ -453,13 +475,13 @@ internal class OtiumEndpointService
         if (termin is null)
             return null;
 
-        var anwesenheiten = await (await _attendanceService.GetAttendanceForTerminAsync(terminId))
-            .ToAsyncEnumerable()
-            .Select<KeyValuePair<Models_Person, OtiumAnwesenheitsStatus>, LehrerEinschreibung>(async (e, _) =>
-                new LehrerEinschreibung(new PersonInfoMinimal(e.Key),
-                    e.Value,
-                    (await _notesService.GetNotesAsync(e.Key.Id, termin.Block.Id)).Select(n => new Notiz(n))))
-            .ToListAsync();
+        var attendanceData = await _attendanceService.GetAttendanceForTerminAsync(terminId);
+        var notesByStudent = await _notesService.GetNotesByBlockAsync(termin.Block.Id);
+        var anwesenheiten = attendanceData
+            .Select(e => new LehrerEinschreibung(new PersonInfoMinimal(e.Key),
+                e.Value,
+                notesByStudent.TryGetValue(e.Key.Id, out var notes) ? notes.Select(n => new Notiz(n)) : []))
+            .ToList();
 
         var isDoneOrRunning = _blockHelper.IsBlockDoneOrRunning(termin.Block);
 
@@ -492,9 +514,10 @@ internal class OtiumEndpointService
     /// <summary>
     ///     Gets all Otia
     /// </summary>
-    public IEnumerable<ManagementOtiumPreview> GetOtia()
+    public Task<List<ManagementOtiumPreview>> GetOtiaAsync()
     {
         return _dbContext.Otia
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(o => o.Termine)
             .Include(o => o.Kategorie)
@@ -506,16 +529,18 @@ internal class OtiumEndpointService
                 Bezeichnung = otium.Bezeichnung,
                 Kategorie = otium.Kategorie.Id,
                 Termine = otium.Termine.Count
-            });
+            })
+            .ToListAsync();
     }
 
     /// <summary>
     ///     Gets a single Otium
     /// </summary>
     /// <param name="otiumId">The ID of the Otium to get.</param>
-    public ManagementOtiumView GetOtium(Guid otiumId)
+    public async Task<ManagementOtiumView> GetOtiumAsync(Guid otiumId)
     {
-        var otium = _dbContext.Otia
+        var otium = await _dbContext.Otia
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(o => o.Verantwortliche)
             .Include(o => o.Termine)
@@ -526,7 +551,7 @@ internal class OtiumEndpointService
             .Include(o => o.Wiederholungen.OrderBy(w => w.Wochentyp).ThenBy(w => w.Wochentyp).ThenBy(w => w.Block))
             .ThenInclude(t => t.Tutor)
             .Include(o => o.Kategorie)
-            .FirstOrDefault(o => o.Id == otiumId);
+            .FirstOrDefaultAsync(o => o.Id == otiumId);
 
         if (otium is null)
             throw new NotFoundException("Kein Otium mit dieser Id gefunden.");
@@ -581,7 +606,7 @@ internal class OtiumEndpointService
         if (otium is null)
             throw new NotFoundException("Kein Otium mit dieser Id gefunden.");
 
-        var hatEinschreibungen = _dbContext.OtiaEinschreibungen.Any(e => e.Termin.Otium.Id == otiumId);
+        var hatEinschreibungen = await _dbContext.OtiaEinschreibungen.AnyAsync(e => e.Termin.Otium.Id == otiumId);
         if (hatEinschreibungen)
             throw new EntityDeletionException("Otia mit Terminen mit Einschreibungen können nicht gelöscht werden.");
 

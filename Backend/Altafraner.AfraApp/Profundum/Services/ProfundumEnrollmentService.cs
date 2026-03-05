@@ -69,11 +69,12 @@ internal class ProfundumEnrollmentService
         return ret;
     }
 
-    public IEnumerable<ProfundumInstanz> GetAvailableProfundaInstanzen(Models_Person student,
+    public async Task<ProfundumInstanz[]> GetAvailableProfundaInstanzenAsync(Models_Person student,
         IEnumerable<ProfundumSlot> slots, bool profil)
     {
         var klasse = _userService.GetKlassenstufe(student);
-        var profundaInstanzen = _dbContext.ProfundaInstanzen
+        return await _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Slots)
             .Include(p => p.Profundum).ThenInclude(p => p.Kategorie)
@@ -82,32 +83,36 @@ internal class ProfundumEnrollmentService
                         && (p.Profundum.MaxKlasse == null || klasse <= p.Profundum.MaxKlasse))
             .Where(p => !p.Profundum.Kategorie.ProfilProfundum || profil)
             .Where(p => p.Slots.All(x => slots.Contains(x)))
-            .ToArray();
-        return profundaInstanzen;
+            .ToArrayAsync();
     }
 
-    public BlockKatalog[] GetKatalog(Models_Person student)
+    public async Task<BlockKatalog[]> GetKatalogAsync(Models_Person student)
     {
         var now = DateTime.UtcNow;
-        var einschreibeZeitraum = _dbContext.ProfundumEinwahlZeitraeume.Where(z => z.EinwahlStart <= now && z.EinwahlStop > now);
-        if (!einschreibeZeitraum.Any())
-        {
+        var hasOpenEinschreibeZeitraum = await _dbContext.ProfundumEinwahlZeitraeume
+            .AnyAsync(z => z.EinwahlStart <= now && z.EinwahlStop > now);
+        if (!hasOpenEinschreibeZeitraum)
             return [];
-        }
 
-        var slots = _dbContext.ProfundaSlots.ToArray().Order(new ProfundumSlotComparer());
-        var fixedEnrollments = _dbContext.ProfundaEinschreibungen
+        var allSlots = (await _dbContext.ProfundaSlots.AsNoTracking().ToArrayAsync())
+            .Order(new ProfundumSlotComparer())
+            .ToArray();
+        var fixedEnrollments = await _dbContext.ProfundaEinschreibungen
+            .AsNoTracking()
             .Where(e => e.IsFixed)
             .Where(e => e.BetroffenePerson == student)
             .Include(e => e.ProfundumInstanz).ThenInclude(p => p!.Profundum)
-            .Include(e => e.Slot).ToArray();
-        var openSlots = _dbContext.ProfundaSlots.Where(s => !fixedEnrollments.Select(s => s.Slot).Distinct().ToArray().Contains(s)).ToArray();
-        var profilPflichtig = IsProfilPflichtig(student, slots.Select(s => s.Quartal));
-        var profilZulässig = IsProfilZulässig(student, slots.Select(s => s.Quartal));
+            .Include(e => e.ProfundumInstanz).ThenInclude(p => p!.Slots)
+            .Include(e => e.Slot)
+            .ToArrayAsync();
+        var fixedSlots = fixedEnrollments.Select(e => e.Slot).Distinct().ToArray();
+        var openSlots = allSlots.Where(s => !fixedSlots.Contains(s)).ToArray();
+        var profilPflichtig = IsProfilPflichtig(student, allSlots.Select(s => s.Quartal));
+        var profilZulässig = IsProfilZulässig(student, allSlots.Select(s => s.Quartal));
 
-        var angebote = GetAvailableProfundaInstanzen(student, openSlots, profilPflichtig || profilZulässig).ToArray();
+        var angebote = await GetAvailableProfundaInstanzenAsync(student, openSlots, profilPflichtig || profilZulässig);
 
-        return slots
+        return allSlots
             .Select(slot => new
             {
                 slot,
@@ -117,11 +122,8 @@ internal class ProfundumEnrollmentService
             })
             .Select(t => new BlockKatalog
             {
-                Fixed = _dbContext.ProfundaEinschreibungen
-                    .Where(e => e.IsFixed)
-                    .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Slots)
-                    .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Profundum)
-                    .Where(e => e.BetroffenePerson.Id == student.Id)
+                // Use already-loaded fixedEnrollments instead of per-slot DB query
+                Fixed = fixedEnrollments
                     .Where(e => e.Slot.Id == t.slot.Id)
                     .Select(e => e.ProfundumInstanz)
                     .Select(p => p == null ? new BlockOption { Label = "-", Value = null } : new BlockOption
@@ -184,7 +186,7 @@ internal class ProfundumEnrollmentService
             .Include(e => e.Slot)
             .ToArrayAsync();
         var fixedSlots = fixedEnrollments.Select(s => s.Slot).Distinct().ToArray();
-        var slots = _dbContext.ProfundaSlots.ToArray();
+        var slots = await _dbContext.ProfundaSlots.ToArrayAsync();
         var openSlots = await _dbContext.ProfundaSlots
             .Where(s => !fixedSlots.Contains(s))
             .ToArrayAsync();
@@ -197,7 +199,7 @@ internal class ProfundumEnrollmentService
 
         var profilPflichtig = IsProfilPflichtig(student, slots.Select(s => s.Quartal));
         var profilZulässig = IsProfilZulässig(student, slots.Select(s => s.Quartal));
-        var angebote = GetAvailableProfundaInstanzen(student, openSlots, profilPflichtig || profilZulässig).ToHashSet();
+        var angebote = (await GetAvailableProfundaInstanzenAsync(student, openSlots, profilPflichtig || profilZulässig)).ToHashSet();
         var angeboteUsed = new HashSet<ProfundumInstanz>();
 
         var wuenscheDict = new Dictionary<ProfundumBelegWunschStufe, HashSet<ProfundumInstanz>>
@@ -322,21 +324,29 @@ internal class ProfundumEnrollmentService
     public async Task<Dictionary<string, DTOProfundumDefinition>> GetEnrollment(Models_Person student,
         ICollection<Guid> slotIds)
     {
-        return (await _dbContext.ProfundaSlots.Where(s => slotIds.Contains(s.Id)).ToArrayAsync()).ToDictionary(
+        var slots = await _dbContext.ProfundaSlots.AsNoTracking()
+            .Where(s => slotIds.Contains(s.Id)).ToArrayAsync();
+
+        // Load all enrollments for all slots in one batched query instead of per-slot
+        var enrollments = await _dbContext.ProfundaEinschreibungen
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(pe => pe.BetroffenePerson.Id == student.Id)
+            .Where(pe => pe.ProfundumInstanz != null)
+            .Include(pe => pe.ProfundumInstanz!)
+                .ThenInclude(pi => pi.Profundum).ThenInclude(p => p.Kategorie)
+            .Include(pe => pe.ProfundumInstanz!)
+                .ThenInclude(pi => pi.Profundum).ThenInclude(p => p.Fachbereiche)
+            .Include(pe => pe.ProfundumInstanz!)
+                .ThenInclude(pi => pi.Slots)
+            .Where(pe => slotIds.Contains(pe.Slot.Id))
+            .ToArrayAsync();
+
+        return slots.ToDictionary(
             s => s.ToString(),
-            s =>
-                _dbContext.ProfundaEinschreibungen
-                    .AsSplitQuery()
-                    .Where(p => p.ProfundumInstanz == null)
-                    .Include(pe => pe.ProfundumInstanz!)
-                    .ThenInclude(pi => pi.Profundum)
-                    .ThenInclude(p => p.Kategorie)
-                    .Include(pe => pe.ProfundumInstanz!)
-                    .ThenInclude(pi => pi.Profundum)
-                    .ThenInclude(p => p.Fachbereiche)
-                    .Where(pe => pe.BetroffenePerson.Id == student.Id)
-                    .Where(p => p.ProfundumInstanz!.Slots.Contains(s))
-                    .Select(pe => new DTOProfundumDefinition(pe.ProfundumInstanz!.Profundum))
-                    .First());
+            s => enrollments
+                .Where(pe => pe.ProfundumInstanz!.Slots.Any(slot => slot.Id == s.Id))
+                .Select(pe => new DTOProfundumDefinition(pe.ProfundumInstanz!.Profundum))
+                .First());
     }
 }
