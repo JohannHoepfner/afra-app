@@ -1,7 +1,6 @@
 {
     "name": "Afra-App",
-    "dockerComposeFile": "docker-compose.yml",
-    "service": "app",
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
     "workspaceFolder": "/workspaces/afra-app",
 
     "features": {
@@ -11,7 +10,8 @@
         "ghcr.io/devcontainers/features/node:1": {
             "version": "lts"
         },
-        "ghcr.io/devcontainers/features/rust:1": {}
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
     },
 
     "forwardPorts": [5173, 5043, 5432, 8090, 1025, 8000],
@@ -43,12 +43,13 @@
     },
 
     "remoteEnv": {
-        "ConnectionStrings__DefaultConnection": "Host=db;Database=afra-app;Username=AfraAppUser;Password=AfraAppPassword;",
-        "SMTP__Host": "mailcatcher",
-        "EmergencyBackup__BaseUri": "http://emergency:8000/"
+        "ConnectionStrings__DefaultConnection": "Host=localhost;Database=afra-app;Username=AfraAppUser;Password=AfraAppPassword;",
+        "SMTP__Host": "localhost",
+        "EmergencyBackup__BaseUri": "http://localhost:8000/"
     },
 
-    "postCreateCommand": "cd /workspaces/afra-app/dev && bash create_dev.sh && cd /workspaces/afra-app/WebClient && npm install",
+    "postCreateCommand": "cd ${containerWorkspaceFolder}/dev && bash create_dev.sh && cd ${containerWorkspaceFolder}/WebClient && npm install",
+    "postStartCommand": "docker compose -f ${containerWorkspaceFolder}/dev/compose.yaml up -d",
 
     "customizations": {
         "vscode": {
