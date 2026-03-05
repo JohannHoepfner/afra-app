@@ -302,6 +302,12 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
 
         modelBuilder.Entity<CalendarSubscription>(s => { s.HasOne(b => b.BetroffenePerson).WithMany(); });
 
+        modelBuilder.Entity<Person>()
+            .HasIndex(p => p.Rolle);
+
+        modelBuilder.Entity<ProfundumEinschreibung>()
+            .HasIndex(e => new { e.IsFixed, e.BetroffenePersonId });
+
         modelBuilder.Entity<ProfundumFeedbackKategorie>(e =>
         {
             e.HasMany(k => k.Fachbereiche)

@@ -200,7 +200,7 @@ internal class OtiumEndpointService
 
         var schultage = await schultageQuery.ToListAsync();
 
-        var einschreibungen = await _dbContext.OtiaEinschreibungen
+        IQueryable<OtiumEinschreibung> einschreibungenQuery = _dbContext.OtiaEinschreibungen
             .Where(e => e.BetroffenePerson.Id == user.Id)
             .Include(e => e.Termin)
             .ThenInclude(e => e.Block)
@@ -211,9 +211,12 @@ internal class OtiumEndpointService
             .ThenInclude(e => e.Otium)
             .ThenInclude(e => e.Kategorie)
             .OrderBy(s => s.Termin.Block.SchultagKey)
-            .ThenBy(s => s.Termin.Block.SchemaId)
-            .Where(e => schultage.Contains(e.Termin.Block.Schultag))
-            .ToListAsync();
+            .ThenBy(s => s.Termin.Block.SchemaId);
+        if (!all)
+            einschreibungenQuery = einschreibungenQuery
+                .Where(e => e.Termin.Block.Schultag.Datum >= startDate && e.Termin.Block.Schultag.Datum < endDate);
+
+        var einschreibungen = await einschreibungenQuery.ToListAsync();
 
         var weeks = schultage.GroupBy(s => s.Datum.GetStartOfWeek());
 

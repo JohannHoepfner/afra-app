@@ -131,16 +131,45 @@ public class AttendanceService : IAttendanceService
             .Include(t => t.Otium)
             .ToListAsync();
 
+        // Batch-load all enrollments and attendances for the entire block at once
+        // to avoid N+1 queries (one per termin).
+        var blockSchema = _blockHelper.Get(block.SchemaId)!;
+        var now = DateTime.Now;
+        var time = TimeOnly.FromDateTime(now);
+        var isBlockRunning = blockSchema.Interval.ToDateTimeInterval(DateOnly.FromDateTime(now)).Contains(now);
+
+        var allEnrollments = await _dbContext.OtiaEinschreibungen
+            .AsNoTracking()
+            .Where(e => e.Termin.Block.Id == blockId)
+            .Include(e => e.BetroffenePerson)
+            .Select(e => new { TerminId = e.Termin.Id, e.BetroffenePerson, e.Interval })
+            .OrderBy(e => e.BetroffenePerson.FirstName)
+            .ThenBy(e => e.BetroffenePerson.LastName)
+            .ToListAsync();
+
+        var enrolledPersonIds = allEnrollments.Select(e => e.BetroffenePerson.Id).Distinct().ToHashSet();
+
+        var allAttendances = await _dbContext.OtiaAnwesenheiten
+            .AsNoTracking()
+            .Where(a => a.BlockId == blockId && enrolledPersonIds.Contains(a.StudentId))
+            .ToDictionaryAsync(a => a.StudentId, a => a.Status);
+
         var terminAttendance = new Dictionary<OtiumTermin, Dictionary<Person, OtiumAnwesenheitsStatus>>();
         foreach (var termin in termine)
         {
-            var attendance = await GetAttendanceForTerminAsync(termin.Id);
-            terminAttendance[termin] = attendance;
+            var enrollmentsForTermin = allEnrollments.Where(e => e.TerminId == termin.Id);
+            if (isBlockRunning)
+                enrollmentsForTermin = enrollmentsForTermin
+                    .Where(e => e.Interval.Start <= time && e.Interval.End >= time);
+
+            var persons = enrollmentsForTermin.Select(e => e.BetroffenePerson).ToList();
+            terminAttendance[termin] = persons.ToDictionary(
+                p => p,
+                p => allAttendances.TryGetValue(p.Id, out var status) ? status : DefaultAttendanceStatus);
         }
 
         // If the block is not mandatory, we return the attendance without checking for missing students
-        var blockSchema = _blockHelper.Get(block.SchemaId);
-        if (!blockSchema!.Verpflichtend)
+        if (!blockSchema.Verpflichtend)
         {
             return (terminAttendance, new Dictionary<Person, OtiumAnwesenheitsStatus>(), true);
         }

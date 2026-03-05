@@ -107,6 +107,15 @@ internal class ProfundumEnrollmentService
 
         var angebote = GetAvailableProfundaInstanzen(student, openSlots, profilPflichtig || profilZulässig).ToArray();
 
+        // Preload all fixed enrollments for this student (with related data) once,
+        // to avoid issuing a separate DB query per slot inside the Select below.
+        var allFixedEnrollmentsForStudent = _dbContext.ProfundaEinschreibungen
+            .Where(e => e.IsFixed && e.BetroffenePerson.Id == student.Id)
+            .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Slots)
+            .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Profundum)
+            .Include(e => e.Slot)
+            .ToArray();
+
         return slots
             .Select(slot => new
             {
@@ -117,11 +126,7 @@ internal class ProfundumEnrollmentService
             })
             .Select(t => new BlockKatalog
             {
-                Fixed = _dbContext.ProfundaEinschreibungen
-                    .Where(e => e.IsFixed)
-                    .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Slots)
-                    .Include(p => p.ProfundumInstanz).ThenInclude(i => i!.Profundum)
-                    .Where(e => e.BetroffenePerson.Id == student.Id)
+                Fixed = allFixedEnrollmentsForStudent
                     .Where(e => e.Slot.Id == t.slot.Id)
                     .Select(e => e.ProfundumInstanz)
                     .Select(p => p == null ? new BlockOption { Label = "-", Value = null } : new BlockOption
