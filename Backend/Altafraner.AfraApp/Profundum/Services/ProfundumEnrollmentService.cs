@@ -32,6 +32,14 @@ internal class ProfundumEnrollmentService
     private readonly IRulesFactory _rulesFactory;
     private readonly UserService _userService;
 
+    private static readonly Func<AfraAppContext, DateTime, Task<bool>> HasOpenEinschreibeZeitraumQuery =
+        EF.CompileAsyncQuery((AfraAppContext ctx, DateTime now) =>
+            ctx.ProfundumEinwahlZeitraeume.Any(z => z.EinwahlStart <= now && z.EinwahlStop > now));
+
+    private static readonly Func<AfraAppContext, DateTime, Task<ProfundumEinwahlZeitraum?>> GetOpenEinschreibeZeitraumQuery =
+        EF.CompileAsyncQuery((AfraAppContext ctx, DateTime now) =>
+            ctx.ProfundumEinwahlZeitraeume.FirstOrDefault(z => z.EinwahlStart <= now && z.EinwahlStop > now));
+
     public ProfundumEnrollmentService(AfraAppContext dbContext,
         ILogger<ProfundumEnrollmentService> logger,
         UserService userService,
@@ -89,8 +97,7 @@ internal class ProfundumEnrollmentService
     public async Task<BlockKatalog[]> GetKatalogAsync(Models_Person student)
     {
         var now = DateTime.UtcNow;
-        var hasOpenEinschreibeZeitraum = await _dbContext.ProfundumEinwahlZeitraeume
-            .AnyAsync(z => z.EinwahlStart <= now && z.EinwahlStop > now);
+        var hasOpenEinschreibeZeitraum = await HasOpenEinschreibeZeitraumQuery(_dbContext, now);
         if (!hasOpenEinschreibeZeitraum)
             return [];
 
@@ -173,9 +180,7 @@ internal class ProfundumEnrollmentService
     public async Task RegisterBelegWunschAsync(Models_Person student, Dictionary<string, Guid[]> wuensche)
     {
         var now = DateTime.UtcNow;
-        var einschreibeZeitraum =
-            await _dbContext.ProfundumEinwahlZeitraeume.FirstOrDefaultAsync(z =>
-                z.EinwahlStart <= now && z.EinwahlStop > now);
+        var einschreibeZeitraum = await GetOpenEinschreibeZeitraumQuery(_dbContext, now);
         if (einschreibeZeitraum is null)
             throw new ProfundumEinwahlWunschException("Einwahl geschlossen");
 

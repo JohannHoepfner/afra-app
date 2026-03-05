@@ -18,6 +18,18 @@ public class AttendanceService : IAttendanceService
     private readonly BlockHelper _blockHelper;
     private readonly AfraAppContext _dbContext;
 
+    private static readonly Func<AfraAppContext, Guid, Guid, Task<OtiumAnwesenheitsStatus?>> GetAttendanceStatusQuery =
+        EF.CompileAsyncQuery((AfraAppContext ctx, Guid studentId, Guid blockId) =>
+            ctx.OtiaAnwesenheiten
+                .Where(a => a.StudentId == studentId && a.BlockId == blockId)
+                .Select(a => (OtiumAnwesenheitsStatus?)a.Status)
+                .FirstOrDefault());
+
+    private static readonly Func<AfraAppContext, Guid, Guid, Task<OtiumAnwesenheit?>> GetAttendanceEntityQuery =
+        EF.CompileAsyncQuery((AfraAppContext ctx, Guid studentId, Guid blockId) =>
+            ctx.OtiaAnwesenheiten
+                .FirstOrDefault(a => a.StudentId == studentId && a.BlockId == blockId));
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AttendanceService"/> class.
     /// </summary>
@@ -58,11 +70,8 @@ public class AttendanceService : IAttendanceService
     /// <inheritdoc />
     public async Task<OtiumAnwesenheitsStatus> GetAttendanceForStudentInBlockAsync(Guid blockId, Guid personId)
     {
-        var attendance = await _dbContext.OtiaAnwesenheiten
-            .Where(a => a.StudentId == personId && a.BlockId == blockId)
-            .Select(a => new { a.Status })
-            .FirstOrDefaultAsync();
-        return attendance?.Status ?? DefaultAttendanceStatus;
+        var status = await GetAttendanceStatusQuery(_dbContext, personId, blockId);
+        return status ?? DefaultAttendanceStatus;
     }
 
     /// <inheritdoc />
@@ -296,8 +305,7 @@ public class AttendanceService : IAttendanceService
 
     private async Task CreateOrUpdate(Guid studentId, Guid blockId, OtiumAnwesenheitsStatus status)
     {
-        var attendance = await _dbContext.OtiaAnwesenheiten
-            .FirstOrDefaultAsync(a => a.StudentId == studentId && a.BlockId == blockId);
+        var attendance = await GetAttendanceEntityQuery(_dbContext, studentId, blockId);
 
         if (attendance is not null)
             attendance.Status = status;

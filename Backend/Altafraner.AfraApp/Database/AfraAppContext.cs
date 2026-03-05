@@ -308,6 +308,15 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
                 .WithMany();
         });
 
+        modelBuilder.Entity<Person>()
+            .HasIndex(p => p.Rolle);
+
+        modelBuilder.Entity<ProfundumEinwahlZeitraum>()
+            .HasIndex(z => new { z.EinwahlStart, z.EinwahlStop });
+
+        modelBuilder.Entity<ProfundumEinschreibung>()
+            .HasIndex(e => e.IsFixed);
+
         /*
          * This is a bit annoying, but we'll have to do it because of a bug in the Npgsql provider.
          * By default, it'll use '\0' as the default value for char columns, as it is the default value for char in C#.
