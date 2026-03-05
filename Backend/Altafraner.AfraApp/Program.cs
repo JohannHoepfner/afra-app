@@ -80,3 +80,5 @@ app.MapAltafranerBackbone();
 await app.WarmupAltafranerBackbone();
 
 app.Run();
+
+public partial class Program { }

@@ -48,3 +48,9 @@ jobs:
       run: dotnet restore Backend/Altafraner.AfraApp/Altafraner.AfraApp.csproj
     - name: Build
       run: dotnet build --no-restore Backend/Altafraner.AfraApp/Altafraner.AfraApp.csproj
+    - name: Restore test dependencies
+      run: dotnet restore Backend/Altafraner.AfraApp.IntegrationTests/Altafraner.AfraApp.IntegrationTests.csproj
+    - name: Build integration tests
+      run: dotnet build --no-restore Backend/Altafraner.AfraApp.IntegrationTests/Altafraner.AfraApp.IntegrationTests.csproj
+    - name: Run integration tests
+      run: dotnet test --no-build Backend/Altafraner.AfraApp.IntegrationTests/Altafraner.AfraApp.IntegrationTests.csproj --logger trx --results-directory TestResults

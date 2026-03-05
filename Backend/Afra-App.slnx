@@ -14,4 +14,5 @@
   <Project Path="Altafraner.Backbone.Scheduling\Altafraner.Backbone.Scheduling.csproj" Type="C#" />
   <Project Path="Altafraner.Backbone.Utils\Altafraner.Backbone.Utils.csproj" Type="C#" />
   <Project Path="Altafraner.Backbone\Altafraner.Backbone.csproj" Type="C#" />
+  <Project Path="Altafraner.AfraApp.IntegrationTests\Altafraner.AfraApp.IntegrationTests.csproj" Type="C#" />
 </Solution>
