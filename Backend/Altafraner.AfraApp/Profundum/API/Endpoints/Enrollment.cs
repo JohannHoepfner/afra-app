@@ -20,7 +20,7 @@ public static class Enrollment
         group.MapPost("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor, Dictionary<String, Guid[]> wuensche) =>
             await svc.RegisterBelegWunschAsync(await userAccessor.GetUserAsync(), wuensche)
         );
-        group.MapGet("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor) => svc.GetKatalog(await userAccessor.GetUserAsync()));
+        group.MapGet("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor) => await svc.GetKatalog(await userAccessor.GetUserAsync()));
         group.MapGet("/einschreibungen", GetEnrollmentsAsync);
     }
 

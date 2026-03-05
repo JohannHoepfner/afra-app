@@ -43,22 +43,24 @@ internal class ProfundumMatchingService
             .Where(e => !e.IsFixed)
             .ExecuteDeleteAsync();
 
-        var slots = _dbContext.ProfundaSlots.ToArray();
-        var fixEinschreibungen = _dbContext.ProfundaEinschreibungen
-            .Where(e => e.IsFixed).ToArray();
-        var angebote = (await _dbContext.ProfundaInstanzen
+        var slots = await _dbContext.ProfundaSlots.AsNoTracking().ToArrayAsync();
+        var fixEinschreibungen = await _dbContext.ProfundaEinschreibungen
+            .AsNoTracking()
+            .Where(e => e.IsFixed).ToArrayAsync();
+        var angebote = await _dbContext.ProfundaInstanzen
+                .AsNoTracking()
                 .Include(pi => pi.Slots).ThenInclude(s => s.EinwahlZeitraum)
                 .Include(pi => pi.Profundum)
-                .ToArrayAsync())
-            .ToArray();
+                .ToArrayAsync();
         var angeboteList = angebote.ToList();
         var belegwuensche = await _dbContext.ProfundaBelegWuensche
+            .AsNoTracking()
             .Include(b => b.BetroffenePerson)
             .Include(b => b.ProfundumInstanz).ThenInclude(b => b.Slots).ThenInclude(s => s.EinwahlZeitraum)
             .Include(b => b.ProfundumInstanz).ThenInclude(pi => pi.Profundum).ThenInclude(p => p.Kategorie)
             .Where(b => angeboteList.Contains(b.ProfundumInstanz))
             .ToArrayAsync();
-        var students = _dbContext.Personen.Where(p => p.Rolle == Rolle.Mittelstufe).ToArray();
+        var students = await _dbContext.Personen.AsNoTracking().Where(p => p.Rolle == Rolle.Mittelstufe).ToArrayAsync();
 
         if (!_profundumConfiguration.Value.DeterministicMatching)
         {
@@ -284,7 +286,7 @@ internal class ProfundumMatchingService
 
     public async IAsyncEnumerable<DTOProfundumEnrollmentSet> GetAllEnrollmentsAsync()
     {
-        var slots = await _dbContext.ProfundaSlots.ToArrayAsync();
+        var slots = await _dbContext.ProfundaSlots.AsNoTracking().ToArrayAsync();
 
         var personenWithData = _dbContext.Personen
             .AsSplitQuery()

@@ -45,6 +45,7 @@ public class UserService
     public async Task<IEnumerable<Person>> GetUsersWithRoleAsync(Rolle role)
     {
         return await _dbContext.Personen
+            .AsNoTracking()
             .Where(p => p.Rolle == role)
             .ToListAsync();
     }
@@ -55,6 +56,7 @@ public class UserService
     public async Task<IEnumerable<Person>> GetUsersWithGlobalPermissionAsync(GlobalPermission permission)
     {
         return await _dbContext.Personen
+            .AsNoTracking()
             .Where(p => p.GlobalPermissions.Contains(permission))
             .ToListAsync();
     }
@@ -111,7 +113,7 @@ public class UserService
     /// </summary>
     public IEnumerable<int> GetKlassenstufen()
     {
-        return _dbContext.Personen.Select(x => x.Gruppe)
+        return _dbContext.Personen.AsNoTracking().Select(x => x.Gruppe)
             .Distinct()
             .ToArray()
             .Where(s => !string.IsNullOrWhiteSpace(s))

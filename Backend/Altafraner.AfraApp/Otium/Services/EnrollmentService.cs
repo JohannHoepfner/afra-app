@@ -424,26 +424,39 @@ internal class EnrollmentService
 
         if (mandatoryBlocks.Count == 0) return [];
 
+        var mandatoryBlockIds = mandatoryBlocks.Select(b => b.Id).ToHashSet();
+
+        // Load all enrolled Mittelstufe person IDs per mandatory block in one query
+        var enrolledByBlock = await _dbContext.OtiaEinschreibungen
+            .AsNoTracking()
+            .Where(e => mandatoryBlockIds.Contains(e.Termin.Block.Id)
+                        && e.BetroffenePerson.Rolle == Rolle.Mittelstufe)
+            .Select(e => new { BlockId = e.Termin.Block.Id, PersonId = e.BetroffenePerson.Id })
+            .ToListAsync();
+
+        var enrolledIdsByBlock = enrolledByBlock
+            .GroupBy(e => e.BlockId)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.PersonId).ToHashSet());
+
+        // Load all non-tutor persons once
+        var allNonTutors = await _dbContext.Personen
+            .AsNoTracking()
+            .Where(p => p.Rolle != Rolle.Tutor)
+            .Select(p => new PersonInfoMinimal
+            {
+                Id = p.Id,
+                Vorname = p.FirstName,
+                Nachname = p.LastName,
+                Rolle = p.Rolle
+            })
+            .ToListAsync();
+
         HashSet<PersonInfoMinimal> missingPersons = [];
 
         foreach (var block in mandatoryBlocks)
         {
-            var missingPersonsInBlock = await _dbContext.Personen
-                .Where(p => p.Rolle != Rolle.Tutor)
-                .Where(p => !_dbContext.OtiaEinschreibungen
-                    .Any(e => e.BetroffenePerson.Id == p.Id &&
-                              e.BetroffenePerson.Rolle == Rolle.Mittelstufe &&
-                              e.Termin.Block.Id == block.Id))
-                .Select(p => new PersonInfoMinimal
-                {
-                    Id = p.Id,
-                    Vorname = p.FirstName,
-                    Nachname = p.LastName,
-                    Rolle = p.Rolle
-                })
-                .ToHashSetAsync();
-
-            missingPersons.UnionWith(missingPersonsInBlock);
+            var enrolledIds = enrolledIdsByBlock.GetValueOrDefault(block.Id, []);
+            missingPersons.UnionWith(allNonTutors.Where(p => !enrolledIds.Contains(p.Id)));
         }
 
         return missingPersons;

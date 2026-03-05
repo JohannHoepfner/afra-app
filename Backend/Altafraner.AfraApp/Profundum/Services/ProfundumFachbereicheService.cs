@@ -24,7 +24,7 @@ internal class ProfundumFachbereicheService
 
     public async Task UpdateFachbereichAsync(Guid id, string label)
     {
-        var entity = _dbContext.ProfundaFachbereiche.FirstOrDefault(x => x.Id == id);
+        var entity = await _dbContext.ProfundaFachbereiche.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) throw new ArgumentException("Kategorie not found", nameof(id));
         entity.Label = label;
         await _dbContext.SaveChangesAsync();
@@ -32,7 +32,7 @@ internal class ProfundumFachbereicheService
 
     public async Task DeleteFachbereichAsync(Guid id)
     {
-        var entity = _dbContext.ProfundaFachbereiche.FirstOrDefault(x => x.Id == id);
+        var entity = await _dbContext.ProfundaFachbereiche.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) throw new ArgumentException("Kategorie not found", nameof(id));
         _dbContext.ProfundaFachbereiche.Remove(entity);
         await _dbContext.SaveChangesAsync();
@@ -40,6 +40,6 @@ internal class ProfundumFachbereicheService
 
     public async Task<List<ProfundumFachbereich>> GetFachbereicheAsync()
     {
-        return await _dbContext.ProfundaFachbereiche.ToListAsync();
+        return await _dbContext.ProfundaFachbereiche.AsNoTracking().ToListAsync();
     }
 }

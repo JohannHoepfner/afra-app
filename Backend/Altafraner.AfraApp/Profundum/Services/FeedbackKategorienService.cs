@@ -71,6 +71,7 @@ internal class FeedbackKategorienService
     public async Task<IEnumerable<ProfundumFeedbackKategorie>> GetAllCategories()
     {
         return await _dbContext.ProfundumFeedbackKategories
+            .AsNoTracking()
             .Include(e => e.Fachbereiche)
             .OrderBy(e => e.Fachbereiche.Count)
             .ThenBy(e => e.Label)

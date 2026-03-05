@@ -31,9 +31,7 @@ public class AttendanceService : IAttendanceService
     public async Task<OtiumAnwesenheitsStatus> GetAttendanceForEnrollmentAsync(Guid enrollmentId)
     {
         var enrollment = await _dbContext.OtiaEinschreibungen
-            .Include(e => e.Termin)
-            .ThenInclude(t => t.Block)
-            .Include(t => t.BetroffenePerson)
+            .AsNoTracking()
             .Where(e => e.Id == enrollmentId)
             .Select(e => new
             {
@@ -47,6 +45,7 @@ public class AttendanceService : IAttendanceService
 
         // If we were to Select (a => a.Status), we could not check for null, as it would return the default value of AnwesenheitsStatus and not null;
         var attendance = await _dbContext.OtiaAnwesenheiten
+            .AsNoTracking()
             .Where(a => a.StudentId == enrollment.PersonId &&
                         a.BlockId == enrollment.BlockId)
             .Select(a => new { a.Status })
@@ -131,16 +130,49 @@ public class AttendanceService : IAttendanceService
             .Include(t => t.Otium)
             .ToListAsync();
 
+        var terminIds = termine.Select(t => t.Id).ToHashSet();
+        var blockSchema = _blockHelper.Get(block.SchemaId)!;
+        var now = DateTime.Now;
+        var time = TimeOnly.FromDateTime(now);
+        var isBlockRunning = blockSchema.Interval.ToDateTimeInterval(DateOnly.FromDateTime(now)).Contains(now);
+
+        // Load all enrollments for all termine in a single query instead of N queries
+        var allEnrollmentsRaw = (await _dbContext.OtiaEinschreibungen
+                .AsNoTracking()
+                .Include(e => e.BetroffenePerson)
+                .Where(e => terminIds.Contains(e.Termin.Id))
+                .Select(e => new { TerminId = e.Termin.Id, e.BetroffenePerson, e.Interval })
+                .OrderBy(e => e.BetroffenePerson.FirstName)
+                .ThenBy(e => e.BetroffenePerson.LastName)
+                .ToListAsync())
+            .AsEnumerable();
+
+        if (isBlockRunning)
+            allEnrollmentsRaw = allEnrollmentsRaw.Where(e => e.Interval.Start <= time && e.Interval.End >= time);
+
+        var enrollmentsList = allEnrollmentsRaw.ToList();
+        var enrolledPersonIds = enrollmentsList.Select(e => e.BetroffenePerson.Id).Distinct().ToHashSet();
+        var allAttendances = enrolledPersonIds.Count > 0
+            ? await _dbContext.OtiaAnwesenheiten
+                .AsNoTracking()
+                .Where(a => a.BlockId == blockId && enrolledPersonIds.Contains(a.StudentId))
+                .ToDictionaryAsync(a => a.StudentId, a => a.Status)
+            : new Dictionary<Guid, OtiumAnwesenheitsStatus>();
+
         var terminAttendance = new Dictionary<OtiumTermin, Dictionary<Person, OtiumAnwesenheitsStatus>>();
         foreach (var termin in termine)
         {
-            var attendance = await GetAttendanceForTerminAsync(termin.Id);
-            terminAttendance[termin] = attendance;
+            var persons = enrollmentsList
+                .Where(e => e.TerminId == termin.Id)
+                .Select(e => e.BetroffenePerson)
+                .ToList();
+            terminAttendance[termin] = persons.ToDictionary(
+                p => p,
+                p => allAttendances.TryGetValue(p.Id, out var s) ? s : DefaultAttendanceStatus);
         }
 
         // If the block is not mandatory, we return the attendance without checking for missing students
-        var blockSchema = _blockHelper.Get(block.SchemaId);
-        if (!blockSchema!.Verpflichtend)
+        if (!blockSchema.Verpflichtend)
         {
             return (terminAttendance, new Dictionary<Person, OtiumAnwesenheitsStatus>(), true);
         }
@@ -176,6 +208,7 @@ public class AttendanceService : IAttendanceService
         Guid personId)
     {
         var attendances = await _dbContext.OtiaAnwesenheiten
+            .AsNoTracking()
             .Where(a => a.StudentId == personId && blockIds.Contains(a.BlockId))
             .ToDictionaryAsync(a => a.BlockId, a => a.Status);
 
@@ -186,11 +219,11 @@ public class AttendanceService : IAttendanceService
     /// <inheritdoc />
     public async Task SetAttendanceForEnrollmentAsync(Guid enrollmentId, OtiumAnwesenheitsStatus status)
     {
-        var einschreibung = _dbContext.OtiaEinschreibungen
+        var einschreibung = await _dbContext.OtiaEinschreibungen
             .AsNoTracking()
             .Where(e => e.Id == enrollmentId)
             .Select(e => new { BlockId = e.Termin.Block.Id, StudentId = e.BetroffenePerson.Id })
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
         if (einschreibung is null)
             throw new KeyNotFoundException($"Enrollment ID {enrollmentId} not found");

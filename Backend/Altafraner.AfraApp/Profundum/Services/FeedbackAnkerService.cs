@@ -58,6 +58,7 @@ internal class FeedbackAnkerService
     public async Task<Dictionary<ProfundumFeedbackKategorie, List<ProfundumFeedbackAnker>>> GetAnkerByCategories()
     {
         var result = await _dbContext.ProfundumFeedbackAnker
+            .AsNoTracking()
             .Include(e => e.Kategorie)
             .OrderBy(a => a.Label)
             .ThenBy(e => e.Kategorie.Fachbereiche.Count)
@@ -71,6 +72,7 @@ internal class FeedbackAnkerService
     public async Task<List<ProfundumFeedbackAnker>> GetAnker(Guid instanzId)
     {
         var profundumFachbereicheIds = await _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .Where(e => e.Id == instanzId)
             .SelectMany(e => e.Profundum.Fachbereiche)
             .Select(e => e.Id)
@@ -80,6 +82,7 @@ internal class FeedbackAnkerService
             throw new ArgumentException("Profundum not found", nameof(instanzId));
 
         var result = await _dbContext.ProfundumFeedbackAnker
+            .AsNoTracking()
             .Include(e => e.Kategorie)
             .Where(e => e.Kategorie.Fachbereiche.Any(k => profundumFachbereicheIds.Contains(k.Id)))
             .OrderBy(a => a.Label)

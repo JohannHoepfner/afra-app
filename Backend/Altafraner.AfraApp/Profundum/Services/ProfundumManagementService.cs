@@ -49,6 +49,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumEinwahlZeitraum[]> GetEinwahlZeiträumeAsync()
     {
         return _dbContext.ProfundumEinwahlZeitraeume
+            .AsNoTracking()
             .Select(e => new DTOProfundumEinwahlZeitraum(e))
             .ToArrayAsync();
     }
@@ -77,6 +78,7 @@ internal class ProfundumManagementService
     public async Task<DTOProfundumSlot[]> GetSlotsAsync()
     {
         return (await _dbContext.ProfundaSlots
+            .AsNoTracking()
             .Include(s => s.EinwahlZeitraum)
             .ToArrayAsync())
             .Order(new ProfundumSlotComparer())
@@ -176,7 +178,7 @@ internal class ProfundumManagementService
 
     public Task<DTOProfundumKategorie[]> GetKategorienAsync()
     {
-        return _dbContext.ProfundaKategorien.Select(k => new DTOProfundumKategorie(k)).ToArrayAsync();
+        return _dbContext.ProfundaKategorien.AsNoTracking().Select(k => new DTOProfundumKategorie(k)).ToArrayAsync();
     }
 
     public async Task<ProfundumDefinition> CreateProfundumAsync(DTOProfundumDefinitionCreation dtoProfundum)
@@ -257,6 +259,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumDefinition[]> GetProfundaAsync()
     {
         return _dbContext.Profunda
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Kategorie)
             .Include(p => p.Dependencies)
@@ -269,6 +272,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumDefinition?> GetProfundumAsync(Guid profundumId)
     {
         return _dbContext.Profunda
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Kategorie)
             .Include(p => p.Dependencies)
@@ -313,6 +317,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumInstanz[]> GetInstanzenAsync()
     {
         return _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .AsSingleQuery()
             .Include(p => p.Verantwortliche)
             .Include(i => i.Profundum).ThenInclude(p => p.Dependencies)
@@ -329,6 +334,7 @@ internal class ProfundumManagementService
     public Task<DTOProfundumInstanz?> GetInstanzAsync(Guid instanzId)
     {
         return _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .AsSingleQuery()
             .Include(p => p.Verantwortliche)
             .Include(i => i.Profundum).ThenInclude(p => p.Dependencies)
@@ -396,25 +402,30 @@ internal class ProfundumManagementService
             throw new ArgumentException();
         }
 
+        // Batch-load all referenced instanzen and slots in one query each
+        var instanzIds = enrollments.Where(e => e.ProfundumInstanzId is not null)
+            .Select(e => e.ProfundumInstanzId!.Value).ToHashSet();
+        var slotIds = enrollments.Select(e => e.ProfundumSlotId).ToHashSet();
+
+        var instanzenById = await _dbContext.ProfundaInstanzen
+            .Where(i => instanzIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id);
+        var slotsById = await _dbContext.ProfundaSlots
+            .Where(s => slotIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id);
 
         foreach (var e in enrollments)
         {
-            ProfundumInstanz? instanz;
+            ProfundumInstanz? instanz = null;
             if (e.ProfundumInstanzId is not null)
             {
-                instanz = await _dbContext.ProfundaInstanzen.FindAsync(e.ProfundumInstanzId);
-                if (instanz is null) throw new ArgumentException();
-            }
-            else
-            {
-                instanz = null;
+                if (!instanzenById.TryGetValue(e.ProfundumInstanzId.Value, out instanz))
+                    throw new ArgumentException();
             }
 
-            var slot = await _dbContext.ProfundaSlots.FindAsync(e.ProfundumSlotId);
-            if (slot is null)
-            {
+            if (!slotsById.TryGetValue(e.ProfundumSlotId, out var slot))
                 throw new ArgumentException();
-            }
+
             _dbContext.ProfundaEinschreibungen.Add(new ProfundumEinschreibung
             {
                 BetroffenePerson = person,
@@ -443,11 +454,13 @@ internal class ProfundumManagementService
             throw new NotFoundException("instanz not found");
         }
 
-        var teilnehmer = _dbContext.ProfundaEinschreibungen
+        var teilnehmer = await _dbContext.ProfundaEinschreibungen
+            .AsNoTracking()
             .Where(e => e.ProfundumInstanz != null && e.ProfundumInstanz.Id == p.Id)
             .Select(e => e.BetroffenePerson)
             .Distinct()
-            .AsEnumerable()
+            .ToListAsync();
+        var teilnehmerOrdered = teilnehmer
             .OrderBy(x => int.Parse((x.Gruppe ?? "0").TakeWhile(char.IsDigit).ToArray()))
             .ThenBy(x =>
                 (x.Gruppe ?? "").SkipWhile(c => !char.IsDigit(c))
@@ -466,7 +479,7 @@ internal class ProfundumManagementService
             ort = p.Ort,
             slots = p.Slots.OrderBy(e => e.Jahr).ThenBy(e => e.Quartal).ThenBy(e => e.Wochentag),
             verantwortliche = p.Verantwortliche.Select(v => new PersonInfoMinimal(v)),
-            teilnehmer = teilnehmer.Select(v => new PersonInfoMinimal(v)),
+            teilnehmer = teilnehmerOrdered.Select(v => new PersonInfoMinimal(v)),
         };
 
         return _typst.GeneratePdf(src, inputs);
@@ -479,11 +492,12 @@ internal class ProfundumManagementService
             throw new NotFoundException("no such slot");
         }
 
-        var instanzen = _dbContext.ProfundaInstanzen
+        var instanzen = (await _dbContext.ProfundaInstanzen
+            .AsNoTracking()
             .Include(i => i.Slots)
             .Include(i => i.Profundum)
-            .ToArray()
-            .Where(i => i.Slots.Contains(slot));
+            .ToArrayAsync())
+            .Where(i => i.Slots.Any(s => s.Id == slot.Id));
 
         using var ms = new MemoryStream();
 
@@ -519,6 +533,7 @@ internal class ProfundumManagementService
             ;
 
         var slots = (await _dbContext.ProfundaSlots
+            .AsNoTracking()
             .ToArrayAsync())
             .Order(new ProfundumSlotComparer())
             .ToArray();

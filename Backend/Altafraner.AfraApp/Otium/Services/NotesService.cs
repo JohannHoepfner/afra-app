@@ -69,20 +69,21 @@ internal sealed class NotesService
 
     public async Task<bool> HasNoteAsync(Guid studentId, Guid blockId, Guid authorId)
     {
-        return await _dbContext.OtiaEinschreibungsNotizen.AnyAsync(e => e.AuthorId == authorId
+        return await _dbContext.OtiaEinschreibungsNotizen.AsNoTracking().AnyAsync(e => e.AuthorId == authorId
                                                                         && e.StudentId == studentId
                                                                         && e.BlockId == blockId);
     }
 
     public async Task<bool> HasNoteAsync(Guid studentId, Guid blockId)
     {
-        return await _dbContext.OtiaEinschreibungsNotizen.AnyAsync(e => e.StudentId == studentId
+        return await _dbContext.OtiaEinschreibungsNotizen.AsNoTracking().AnyAsync(e => e.StudentId == studentId
                                                                         && e.BlockId == blockId);
     }
 
     public async Task<List<OtiumAnwesenheitsNotiz>> GetNotesAsync(Guid studentId, Guid blockId)
     {
         return await _dbContext.OtiaEinschreibungsNotizen
+            .AsNoTracking()
             .Include(e => e.Author)
             .Where(e => e.StudentId == studentId)
             .Where(e => e.BlockId == blockId)
@@ -93,6 +94,7 @@ internal sealed class NotesService
     public async Task<Dictionary<Guid, OtiumAnwesenheitsNotiz[]>> GetNotesByBlockAsync(Guid blockId)
     {
         return await _dbContext.OtiaEinschreibungsNotizen
+            .AsNoTracking()
             .Include(e => e.Author)
             .Where(e => e.BlockId == blockId)
             .OrderByDescending(n => n.LastModified)

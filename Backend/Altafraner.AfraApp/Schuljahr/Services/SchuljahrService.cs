@@ -37,6 +37,7 @@ public class SchuljahrService
     public async Task<Domain.DTO.Schuljahr> GetSchuljahrAsync()
     {
         var schultage = await _dbContext.Schultage
+            .AsNoTracking()
             .Include(s => s.Blocks)
             .OrderBy(s => s.Datum)
             .Select(s => new DTO_Schultag(s.Datum, s.Wochentyp,
@@ -107,11 +108,15 @@ public class SchuljahrService
         if (schultage.SelectMany(s => s.Blocks).Any(b => !blockKeys.Contains(b.SchemaId)))
             throw new KeyNotFoundException("Invalid block provided. Valid blocks are: " + string.Join(", ", blockKeys));
 
+        var incomingDates = schultage.Select(s => s.Datum).ToHashSet();
+        var conflictsByDate = await _dbContext.Schultage
+            .Include(e => e.Blocks)
+            .Where(s => incomingDates.Contains(s.Datum))
+            .ToDictionaryAsync(s => s.Datum);
+
         foreach (var schultag in schultage.ToList())
         {
-            var conflict = await _dbContext.Schultage.Include(e => e.Blocks)
-                .FirstOrDefaultAsync(s => s.Datum == schultag.Datum);
-            if (conflict == null) continue;
+            if (!conflictsByDate.TryGetValue(schultag.Datum, out var conflict)) continue;
 
             conflict.Wochentyp = schultag.Wochentyp;
             schultage.Remove(schultag);
@@ -136,7 +141,7 @@ public class SchuljahrService
     /// </summary>
     public async Task<List<Block>> GetBlocksAsync(DateOnly datum)
     {
-        var blocks = await _dbContext.Blocks.Where(b => b.SchultagKey == datum).ToListAsync();
+        var blocks = await _dbContext.Blocks.AsNoTracking().Where(b => b.SchultagKey == datum).ToListAsync();
         return blocks;
     }
 
@@ -162,6 +167,7 @@ public class SchuljahrService
         var endOfWeek = monday.AddDays(7);
 
         var day = await _dbContext.Blocks
+            .AsNoTracking()
             .Where(b => b.SchultagKey >= monday && b.SchultagKey < endOfWeek)
             .OrderByDescending(b => b.SchultagKey)
             .FirstOrDefaultAsync();
