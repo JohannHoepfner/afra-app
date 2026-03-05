@@ -1,0 +1,39 @@
+services:
+    app:
+        image: mcr.microsoft.com/devcontainers/base:bookworm
+        volumes:
+            - ../:/workspaces/afra-app:cached
+        command: sleep infinity
+        depends_on:
+            - db
+            - mailcatcher
+            - emergency
+
+    db:
+        image: postgres:alpine
+        environment:
+            POSTGRES_USER: "AfraAppUser"
+            POSTGRES_PASSWORD: "AfraAppPassword"
+            POSTGRES_DB: "afra-app"
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+
+    mailcatcher:
+        build:
+            context: ../dev/mock-smtp-server
+            dockerfile: Dockerfile
+
+    emergency:
+        build: ../dev/emergency
+        environment:
+            - BASIC_AUTH_USER=admin
+            - BASIC_AUTH_PASS=admin
+            - FILE_DIR=/data
+            - RETENTION_SECONDS=86400
+            - SWEEP_INTERVAL_SECONDS=60
+        volumes:
+            - emergency-data:/data
+
+volumes:
+    postgres-data:
+    emergency-data:

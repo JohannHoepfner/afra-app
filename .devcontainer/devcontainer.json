@@ -1,0 +1,69 @@
+{
+    "name": "Afra-App",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/afra-app",
+
+    "features": {
+        "ghcr.io/devcontainers/features/dotnet:2": {
+            "version": "10"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        },
+        "ghcr.io/devcontainers/features/rust:1": {}
+    },
+
+    "forwardPorts": [5173, 5043, 5432, 8090, 1025, 8000],
+    "portsAttributes": {
+        "5173": {
+            "label": "WebClient (Vite)",
+            "onAutoForward": "openBrowser"
+        },
+        "5043": {
+            "label": "Backend API",
+            "onAutoForward": "notify"
+        },
+        "5432": {
+            "label": "PostgreSQL",
+            "onAutoForward": "silent"
+        },
+        "8090": {
+            "label": "Mailcatcher",
+            "onAutoForward": "notify"
+        },
+        "1025": {
+            "label": "SMTP",
+            "onAutoForward": "silent"
+        },
+        "8000": {
+            "label": "Emergency Backup Service",
+            "onAutoForward": "silent"
+        }
+    },
+
+    "remoteEnv": {
+        "ConnectionStrings__DefaultConnection": "Host=db;Database=afra-app;Username=AfraAppUser;Password=AfraAppPassword;",
+        "SMTP__Host": "mailcatcher",
+        "EmergencyBackup__BaseUri": "http://emergency:8000/"
+    },
+
+    "postCreateCommand": "cd /workspaces/afra-app/dev && bash create_dev.sh && cd /workspaces/afra-app/WebClient && npm install",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csharp",
+                "ms-dotnettools.csdevkit",
+                "Vue.volar",
+                "rust-lang.rust-analyzer",
+                "esbenp.prettier-vscode",
+                "dbaeumer.vscode-eslint",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "dotnet.defaultSolution": "Backend/Afra-App.slnx"
+            }
+        }
+    }
+}
