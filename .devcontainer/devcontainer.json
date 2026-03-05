@@ -48,7 +48,7 @@
         "EmergencyBackup__BaseUri": "http://localhost:8000/"
     },
 
-    "postCreateCommand": "cd ${containerWorkspaceFolder}/dev && bash create_dev.sh && cd ${containerWorkspaceFolder}/WebClient && npm install",
+    "postCreateCommand": "bash ${containerWorkspaceFolder}/dev/setup.sh ${containerWorkspaceFolder}",
     "postStartCommand": "docker compose -f ${containerWorkspaceFolder}/dev/compose.yaml up -d",
 
     "customizations": {
