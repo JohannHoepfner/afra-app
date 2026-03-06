@@ -142,10 +142,7 @@ const entscheidungLabel = {
                     </span>
                 </div>
                 <div class="text-right text-sm whitespace-nowrap">
-                    <Tag
-                        severity="info"
-                        :value="formatDateRange(antrag.von, antrag.bis)"
-                    />
+                    <Tag severity="info" :value="formatDateRange(antrag.von, antrag.bis)" />
                     <div class="text-gray-500 mt-1">
                         {{ formatTime(antrag.von) }} – {{ formatTime(antrag.bis) }}
                     </div>
@@ -221,10 +218,7 @@ const entscheidungLabel = {
                         {{ antrag.student.gruppe ?? '' }}
                     </span>
                 </div>
-                <Tag
-                    severity="secondary"
-                    :value="formatDateRange(antrag.von, antrag.bis)"
-                />
+                <Tag severity="secondary" :value="formatDateRange(antrag.von, antrag.bis)" />
             </div>
 
             <p class="text-sm mb-2">

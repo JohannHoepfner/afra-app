@@ -98,7 +98,12 @@ function removeStunde(index) {
 }
 
 async function submit() {
-    if (!datumValid.value || !titel.value.trim() || !grund.value.trim() || !stundenValid.value) {
+    if (
+        !datumValid.value ||
+        !titel.value.trim() ||
+        !grund.value.trim() ||
+        !stundenValid.value
+    ) {
         toast.add({
             severity: 'warn',
             summary: 'Fehlende Angaben',

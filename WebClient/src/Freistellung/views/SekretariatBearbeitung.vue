@@ -88,8 +88,8 @@ async function bestaetigen(antragId) {
     <!-- Pending confirmation section -->
     <h2 class="text-lg font-semibold mt-4 mb-1">Warten auf Bestätigung</h2>
     <p class="mb-3 text-sm">
-        Die folgenden Anträge wurden von allen betroffenen Lehrkräften und Mentor:innen genehmigt
-        und warten auf die Bestätigung durch das Sekretariat.
+        Die folgenden Anträge wurden von allen betroffenen Lehrkräften und Mentor:innen
+        genehmigt und warten auf die Bestätigung durch das Sekretariat.
     </p>
 
     <p v-if="!pendingAntraege.length" class="mt-2">
