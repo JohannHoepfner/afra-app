@@ -105,6 +105,20 @@ defineProps({
             </div>
         </template>
 
+        <template v-if="antrag.sekretariatKommentar">
+            <div class="mb-2 p-2 rounded border border-red-200 bg-red-50 text-sm">
+                <span class="font-semibold text-red-700">Sekretariat:</span>
+                <span class="ml-1">{{ antrag.sekretariatKommentar }}</span>
+            </div>
+        </template>
+
+        <template v-if="antrag.schulleiterKommentar">
+            <div class="mb-2 p-2 rounded border border-red-200 bg-red-50 text-sm">
+                <span class="font-semibold text-red-700">Schulleiter:</span>
+                <span class="ml-1">{{ antrag.schulleiterKommentar }}</span>
+            </div>
+        </template>
+
         <!-- Slot for custom actions (buttons, etc.) -->
         <slot />
     </div>

@@ -41,6 +41,8 @@ export const statusSeverity = {
     Abgelehnt: 'danger',
     Bestaetigt: 'warn',
     SchulleiterBestaetigt: 'success',
+    SekretariatAbgelehnt: 'danger',
+    SchulleiterAbgelehnt: 'danger',
 };
 
 /** Status label map for the overall Freistellungsantrag status */
@@ -50,6 +52,8 @@ export const statusLabel = {
     Abgelehnt: 'Abgelehnt',
     Bestaetigt: 'Sekretariat bestätigt',
     SchulleiterBestaetigt: 'Genehmigt',
+    SekretariatAbgelehnt: 'Sekretariat abgelehnt',
+    SchulleiterAbgelehnt: 'Schulleiter abgelehnt',
 };
 
 /** Entscheidung (decision) severity map */
