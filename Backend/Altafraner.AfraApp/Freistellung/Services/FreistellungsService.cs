@@ -90,10 +90,10 @@ public class FreistellungsService
         var antrag = new Domain.Models.Freistellungsantrag
         {
             Student = student,
-            Titel = dto.Titel.Trim(),
+            Grund = dto.Titel.Trim(),
             Von = DateTime.SpecifyKind(dto.Von, DateTimeKind.Utc),
             Bis = DateTime.SpecifyKind(dto.Bis, DateTimeKind.Utc),
-            Grund = dto.Grund,
+            Beschreibung = dto.Grund,
             BetroffeneStunden = dto.Stunden.Select(s => new Domain.Models.BetroffeneStunde
             {
                 Datum = s.Datum,
@@ -111,8 +111,7 @@ public class FreistellungsService
         _dbContext.Freistellungsantraege.Add(antrag);
         await _dbContext.SaveChangesAsync();
 
-        // Notify each assigned teacher
-        foreach (var teacher in lehrer)
+        foreach (var teacher in lehrer.Concat(mentors).DistinctBy(l=>l.Id))
             await _notificationService.ScheduleNotificationAsync(
                 teacher,
                 "Neuer Freistellungsantrag",
@@ -120,22 +119,7 @@ public class FreistellungsService
                  {student.FirstName} {student.LastName} hat einen Freistellungsantrag für {FormatDateRange(dto.Von, dto.Bis)} gestellt.
                  Bitte melde dich in der Afra-App an, um den Antrag zu bearbeiten.
 
-                 Titel: {antrag.Titel}
-                 Grund: {dto.Grund}
-                 """,
-                TimeSpan.FromMinutes(5)
-            );
-
-        // Notify each mentor
-        foreach (var mentor in mentors.DistinctBy(m => m.Id))
-            await _notificationService.ScheduleNotificationAsync(
-                mentor,
-                "Neuer Freistellungsantrag",
-                $"""
-                 {student.FirstName} {student.LastName} hat einen Freistellungsantrag für {FormatDateRange(dto.Von, dto.Bis)} gestellt.
-                 Bitte melde dich in der Afra-App an, um den Antrag als Mentor:in zu bearbeiten.
-
-                 Titel: {antrag.Titel}
+                 Titel: {antrag.Grund}
                  Grund: {dto.Grund}
                  """,
                 TimeSpan.FromMinutes(5)
@@ -276,7 +260,7 @@ public class FreistellungsService
             antrag.Student,
             "Freistellungsantrag vom Sekretariat bestätigt",
             $"""
-             Dein Freistellungsantrag „{antrag.Titel}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Sekretariat bestätigt.
+             Dein Freistellungsantrag „{antrag.Grund}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Sekretariat bestätigt.
              Die Freistellung wartet noch auf die abschließende Genehmigung des Schulleiters.
              """,
             TimeSpan.FromMinutes(5)
@@ -293,7 +277,7 @@ public class FreistellungsService
                 sl,
                 "Freistellungsantrag wartet auf abschließende Genehmigung",
                 $"""
-                 Der Freistellungsantrag „{antrag.Titel}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Sekretariat bestätigt und wartet auf Ihre Genehmigung.
+                 Der Freistellungsantrag „{antrag.Grund}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Sekretariat bestätigt und wartet auf Ihre Genehmigung.
                  Bitte melde dich in der Afra-App an, um den Antrag abschließend zu genehmigen.
                  """,
                 TimeSpan.FromMinutes(5)
@@ -345,7 +329,7 @@ public class FreistellungsService
             antrag.Student,
             "Freistellungsantrag genehmigt",
             $"""
-             Dein Freistellungsantrag „{antrag.Titel}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Schulleiter endgültig genehmigt.
+             Dein Freistellungsantrag „{antrag.Grund}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Schulleiter endgültig genehmigt.
              Die Freistellung ist damit gültig. Melde dich in der Afra-App an, um die Details einzusehen.
              """,
             TimeSpan.FromMinutes(5)
@@ -381,7 +365,7 @@ public class FreistellungsService
             antrag.Student,
             $"Freistellungsantrag {entscheidungText}",
             $"""
-             Dein Freistellungsantrag „{antrag.Titel}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde von {entscheider.FirstName} {entscheider.LastName} {entscheidungText}.{kommentarZeile}
+             Dein Freistellungsantrag „{antrag.Grund}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde von {entscheider.FirstName} {entscheider.LastName} {entscheidungText}.{kommentarZeile}
              Melde dich in der Afra-App an, um den aktuellen Status zu sehen.
              """,
             TimeSpan.FromMinutes(5)
@@ -402,7 +386,7 @@ public class FreistellungsService
                 sekretariatMember,
                 "Freistellungsantrag wartet auf Bestätigung",
                 $"""
-                 Der Freistellungsantrag „{antrag.Titel}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde von allen Lehrkräften und Mentor:innen genehmigt.
+                 Der Freistellungsantrag „{antrag.Grund}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde von allen Lehrkräften und Mentor:innen genehmigt.
                  Bitte melde dich in der Afra-App an, um den Antrag abschließend zu bestätigen.
                  """,
                 TimeSpan.FromMinutes(5)

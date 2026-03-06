@@ -15,10 +15,10 @@ public record FreistellungsantragDto
     public FreistellungsantragDto(Models.Freistellungsantrag antrag)
     {
         Id = antrag.Id;
-        Titel = antrag.Titel;
+        Grund = antrag.Grund;
         Von = antrag.Von;
         Bis = antrag.Bis;
-        Grund = antrag.Grund;
+        Beschreibung = antrag.Beschreibung;
         Status = antrag.Status;
         ErstelltAm = antrag.ErstelltAm;
         Student = new PersonInfoMinimal(antrag.Student);
@@ -35,8 +35,8 @@ public record FreistellungsantragDto
     /// <inheritdoc cref="Models.Freistellungsantrag.Id" />
     public Guid Id { get; init; }
 
-    /// <inheritdoc cref="Models.Freistellungsantrag.Titel" />
-    public string Titel { get; init; }
+    /// <inheritdoc cref="Models.Freistellungsantrag.Grund" />
+    public string Grund { get; init; }
 
     /// <inheritdoc cref="Models.Freistellungsantrag.Von" />
     public DateTime Von { get; init; }
@@ -44,8 +44,8 @@ public record FreistellungsantragDto
     /// <inheritdoc cref="Models.Freistellungsantrag.Bis" />
     public DateTime Bis { get; init; }
 
-    /// <inheritdoc cref="Models.Freistellungsantrag.Grund" />
-    public string Grund { get; init; }
+    /// <inheritdoc cref="Models.Freistellungsantrag.Beschreibung" />
+    public string Beschreibung { get; init; }
 
     /// <inheritdoc cref="Models.Freistellungsantrag.Status" />
     [JsonConverter(typeof(JsonStringEnumConverter<FreistellungsStatus>))]

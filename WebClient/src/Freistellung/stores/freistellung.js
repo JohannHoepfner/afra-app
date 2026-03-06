@@ -44,7 +44,7 @@ export const useFreistellungStore = defineStore('freistellung', {
         },
         async updateLehrer() {
             if (this.lehrer) return;
-            const api = mande('/api/freistellung/lehrer-liste');
+            const api = mande('/api/teachers');
             try {
                 this.lehrer = await api.get();
             } catch (error) {

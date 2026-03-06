@@ -25,9 +25,9 @@ const navItems = [
 
 const vonDateTime = ref(null);
 const bisDateTime = ref(null);
-const titel = ref('');
 const grund = ref('');
-const stunden = ref([]); // list of { datum, block, fach, lehrerId }
+const beschreibung = ref('');
+const stunden = ref([]);
 const loading = ref(false);
 
 await store.updateLehrer();
@@ -38,7 +38,6 @@ const lehrerOptions =
         value: l.id,
     })) ?? [];
 
-// The list of days within the selected range
 const tage = computed(() => {
     if (!vonDateTime.value) return [];
     const von = vonDateTime.value;
@@ -55,7 +54,6 @@ const tage = computed(() => {
     return days;
 });
 
-// Day options for the stunden table
 const tagOptions = computed(() =>
     tage.value.map((d) => ({
         label: formatDateJs(d),
@@ -63,7 +61,6 @@ const tagOptions = computed(() =>
     })),
 );
 
-// When date range changes, remove stunden rows whose date is no longer in range
 watch(tage, (newTage) => {
     const validDates = new Set(newTage.map((d) => toDateStr(d)));
     stunden.value = stunden.value.filter((s) => validDates.has(s.datum));
@@ -100,8 +97,8 @@ function removeStunde(index) {
 async function submit() {
     if (
         !datumValid.value ||
-        !titel.value.trim() ||
         !grund.value.trim() ||
+        !beschreibung.value.trim() ||
         !stundenValid.value
     ) {
         toast.add({
@@ -124,10 +121,10 @@ async function submit() {
 
     try {
         await api.post({
-            titel: titel.value.trim(),
+            grund: grund.value.trim(),
             von: toDateTimeStr(vonDateTime.value),
             bis: toDateTimeStr(bisDateTime.value),
-            grund: grund.value.trim(),
+            beschreibung: beschreibung.value.trim(),
             stunden: stunden.value.map((s) => ({
                 datum: s.datum,
                 block: s.block,
@@ -170,17 +167,15 @@ async function submit() {
     <div class="flex flex-col gap-6 mt-4" style="max-width: 50rem">
         <!-- Title -->
         <div class="flex flex-col gap-1">
-            <label for="titel">Kurztitel</label>
+            <label for="grund">Kurztitel</label>
             <InputText
-                id="titel"
-                v-model="titel"
-                placeholder="z.B. Sportwettkampf, Musikwettbewerb…"
+                id="grund"
+                v-model="grund"
                 :max-length="200"
                 fluid
             />
         </div>
 
-        <!-- Start datetime -->
         <div class="flex flex-col gap-1">
             <label for="vonDateTime">Beginn (Datum und Uhrzeit)</label>
             <DatePicker
@@ -195,7 +190,6 @@ async function submit() {
             />
         </div>
 
-        <!-- End datetime -->
         <div class="flex flex-col gap-1">
             <label for="bisDateTime">Ende (Datum und Uhrzeit)</label>
             <DatePicker
@@ -210,12 +204,11 @@ async function submit() {
             />
         </div>
 
-        <!-- Reason -->
         <div class="flex flex-col gap-1">
-            <label for="grund">Grund der Freistellung</label>
+            <label for="beschreibung">Grund der Freistellung</label>
             <Textarea
-                id="grund"
-                v-model="grund"
+                id="beschreibung"
+                v-model="beschreibung"
                 rows="4"
                 placeholder="Bitte beschreibe den Grund deines Freistellungsantrags..."
                 :max-length="1000"
@@ -223,7 +216,6 @@ async function submit() {
             />
         </div>
 
-        <!-- Betroffene Stunden table -->
         <div class="flex flex-col gap-2">
             <label class="font-semibold">Betroffene Unterrichtsstunden</label>
             <p v-if="!datumValid" class="text-sm text-gray-500">
@@ -319,7 +311,7 @@ async function submit() {
             label="Antrag einreichen"
             icon="pi pi-send"
             :loading="loading"
-            :disabled="!datumValid || !titel.trim() || !grund.trim() || !stundenValid"
+            :disabled="!datumValid || !grund.trim() || !beschreibung.trim() || !stundenValid"
             @click="submit"
         />
     </div>

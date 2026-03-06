@@ -1,10 +1,7 @@
 using Altafraner.AfraApp.Backbone.Authorization;
 using Altafraner.AfraApp.Freistellung.Domain.DTO;
 using Altafraner.AfraApp.Freistellung.Services;
-using Altafraner.AfraApp.User.Domain.DTO;
-using Altafraner.AfraApp.User.Domain.Models;
 using Altafraner.AfraApp.User.Services;
-using Microsoft.EntityFrameworkCore;
 
 namespace Altafraner.AfraApp.Freistellung.API.Endpoints;
 
@@ -18,44 +15,25 @@ public static class FreistellungsEndpoints
     /// </summary>
     public static void MapFreistellungsEndpoints(this IEndpointRouteBuilder app)
     {
-        // Common endpoint for students and teachers to get teacher list
-        app.MapGet("/lehrer-liste", GetLehrerListe)
-            .RequireAuthorization(AuthorizationPolicies.StudentOnly);
-
-        // Student endpoints
         var student = app.MapGroup("/sus")
             .RequireAuthorization(AuthorizationPolicies.StudentOnly);
         student.MapPost("/", CreateAntrag);
         student.MapGet("/", GetAntraegeForStudent);
 
-        // Teacher and mentor endpoints (both are just approvers)
         var lehrer = app.MapGroup("/lehrer")
             .RequireAuthorization(AuthorizationPolicies.TutorOnly);
         lehrer.MapGet("/", GetAntraegeForLehrer);
         lehrer.MapPut("/{antragId:guid}/entscheidung", RecordEntscheidung);
 
-        // Sekretariat endpoints
         var sekretariat = app.MapGroup("/sekretariat")
             .RequireAuthorization(AuthorizationPolicies.Sekretariat);
         sekretariat.MapGet("/", GetAntraegeForSekretariat);
         sekretariat.MapPut("/{antragId:guid}/bestaetigen", BestaetigeAntrag);
 
-        // Schulleiter endpoints
         var schulleiter = app.MapGroup("/schulleiter")
             .RequireAuthorization(AuthorizationPolicies.Schulleiter);
         schulleiter.MapGet("/", GetAntraegeForSchulleiter);
         schulleiter.MapPut("/{antragId:guid}/bestaetigen", SchulleiterBestaetigen);
-    }
-
-    private static IResult GetLehrerListe(AfraAppContext dbContext)
-    {
-        var lehrer = dbContext.Personen
-            .Where(p => p.Rolle == Rolle.Tutor)
-            .OrderBy(p => p.LastName)
-            .ThenBy(p => p.FirstName)
-            .Select(p => new PersonInfoMinimal(p))
-            .AsEnumerable();
-        return Results.Ok(lehrer);
     }
 
     private static async Task<IResult> CreateAntrag(

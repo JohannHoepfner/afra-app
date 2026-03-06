@@ -29,7 +29,7 @@ public class BetroffeneStunde
     public DateOnly Datum { get; set; }
 
     /// <summary>
-    ///     The lesson block number (Unterrichtsblock), e.g. 1–12.
+    ///     The lesson block number (Unterrichtsblock)
     /// </summary>
     public int Block { get; set; }
 

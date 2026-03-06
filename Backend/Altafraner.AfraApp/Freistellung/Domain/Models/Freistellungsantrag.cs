@@ -24,10 +24,16 @@ public class Freistellungsantrag
     public Guid StudentId { get; set; }
 
     /// <summary>
-    ///     A short title summarising the reason for the leave.
+    ///     A short summary of the reason for the leave.
     /// </summary>
     [MaxLength(200)]
-    public required string Titel { get; set; }
+    public required string Grund { get; set; }
+
+    /// <summary>
+    ///     The long reason for the leave.
+    /// </summary>
+    [MaxLength(1000)]
+    public required string Beschreibung { get; set; }
 
     /// <summary>
     ///     The start of the requested leave period (date and time).
@@ -38,12 +44,6 @@ public class Freistellungsantrag
     ///     The end of the requested leave period (date and time, inclusive).
     /// </summary>
     public DateTime Bis { get; set; }
-
-    /// <summary>
-    ///     The reason for the leave.
-    /// </summary>
-    [MaxLength(1000)]
-    public required string Grund { get; set; }
 
     /// <summary>
     ///     The current status of this request.
