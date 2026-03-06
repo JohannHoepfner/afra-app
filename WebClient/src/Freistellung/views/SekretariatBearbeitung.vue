@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Button, useToast } from 'primevue';
+import { Button, Dialog, Textarea, useToast } from 'primevue';
 import { mande } from 'mande';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import { useFreistellungStore } from '@/Freistellung/stores/freistellung.js';
@@ -15,15 +15,25 @@ const navItems = [
 ];
 
 const confirming = ref(null);
+const dialogVisible = ref(false);
+const selectedAntrag = ref(null);
+const kommentar = ref('');
+const submitting = ref(false);
 
 await store.updateSekretariatAntraege();
 
-// Split client-side: pending confirmation = AlleLehrerGenehmigt, processed = everything else
+// Split client-side: pending confirmation = AlleLehrerGenehmigt or SekretariatAbgelehnt, processed = everything else
 const pendingAntraege = computed(
-    () => store.sekretariatAntraege?.filter((a) => a.status === 'AlleLehrerGenehmigt') ?? [],
+    () =>
+        store.sekretariatAntraege?.filter(
+            (a) => a.status === 'AlleLehrerGenehmigt' || a.status === 'SekretariatAbgelehnt',
+        ) ?? [],
 );
 const processedAntraege = computed(
-    () => store.sekretariatAntraege?.filter((a) => a.status !== 'AlleLehrerGenehmigt') ?? [],
+    () =>
+        store.sekretariatAntraege?.filter(
+            (a) => a.status !== 'AlleLehrerGenehmigt' && a.status !== 'SekretariatAbgelehnt',
+        ) ?? [],
 );
 
 async function bestaetigen(antragId) {
@@ -49,6 +59,41 @@ async function bestaetigen(antragId) {
         });
     } finally {
         confirming.value = null;
+    }
+}
+
+function openAblehnenDialog(antrag) {
+    selectedAntrag.value = antrag;
+    kommentar.value = '';
+    dialogVisible.value = true;
+}
+
+async function submitAblehnung() {
+    if (!selectedAntrag.value || !kommentar.value.trim()) return;
+    submitting.value = true;
+
+    const api = mande(`/api/freistellung/sekretariat/${selectedAntrag.value.id}/ablehnen`);
+    try {
+        await api.put({ kommentar: kommentar.value.trim() });
+        toast.add({
+            severity: 'warn',
+            summary: 'Abgelehnt',
+            detail: 'Der Freistellungsantrag wurde vom Sekretariat abgelehnt.',
+            life: 3000,
+        });
+        dialogVisible.value = false;
+        store.sekretariatAntraege = null;
+        await store.updateSekretariatAntraege();
+    } catch (e) {
+        const errorMessage = e.body?.error ?? 'Ein unbekannter Fehler ist aufgetreten.';
+        toast.add({
+            severity: 'error',
+            summary: 'Fehler',
+            detail: errorMessage,
+            life: 5000,
+        });
+    } finally {
+        submitting.value = false;
     }
 }
 </script>
@@ -77,14 +122,23 @@ async function bestaetigen(antragId) {
             :showStudent="true"
             dateTagSeverity="warn"
         >
-            <Button
-                label="Antrag bestätigen"
-                icon="pi pi-check-circle"
-                severity="success"
-                size="small"
-                :loading="confirming === antrag.id"
-                @click="bestaetigen(antrag.id)"
-            />
+            <div class="flex gap-2">
+                <Button
+                    label="Antrag bestätigen"
+                    icon="pi pi-check-circle"
+                    severity="success"
+                    size="small"
+                    :loading="confirming === antrag.id"
+                    @click="bestaetigen(antrag.id)"
+                />
+                <Button
+                    label="Ablehnen"
+                    icon="pi pi-times"
+                    severity="danger"
+                    size="small"
+                    @click="openAblehnenDialog(antrag)"
+                />
+            </div>
         </FreistellungsantragCard>
     </div>
 
@@ -111,6 +165,42 @@ async function bestaetigen(antragId) {
             }"
         />
     </div>
+
+    <!-- Reject dialog -->
+    <Dialog
+        v-model:visible="dialogVisible"
+        modal
+        header="Antrag ablehnen"
+        style="width: 30rem"
+    >
+        <div class="flex flex-col gap-3">
+            <p>
+                Bitte geben Sie einen Kommentar an, was am Antrag
+                <strong>„{{ selectedAntrag?.grund }}"</strong> korrigiert werden soll.
+            </p>
+            <div class="flex flex-col gap-1">
+                <label for="kommentar">Kommentar</label>
+                <Textarea
+                    id="kommentar"
+                    v-model="kommentar"
+                    rows="3"
+                    placeholder="Was muss korrigiert werden?"
+                    :max-length="500"
+                    fluid
+                />
+            </div>
+        </div>
+        <template #footer>
+            <Button label="Abbrechen" severity="secondary" @click="dialogVisible = false" />
+            <Button
+                label="Ablehnen"
+                severity="danger"
+                :loading="submitting"
+                :disabled="!kommentar.trim()"
+                @click="submitAblehnung"
+            />
+        </template>
+    </Dialog>
 </template>
 
 <style scoped></style>
