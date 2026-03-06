@@ -1,12 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Button, Dialog, Tag, Textarea, useToast } from 'primevue';
+import { Button, Dialog, Textarea, useToast } from 'primevue';
 import { mande } from 'mande';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import { useFreistellungStore } from '@/Freistellung/stores/freistellung.js';
 import { useUser } from '@/stores/user.ts';
-import UserPeek from '@/components/UserPeek.vue';
-import { formatStudent, formatTutor } from '@/helpers/formatters';
+import { formatStudent } from '@/helpers/formatters';
+import FreistellungsantragCard from '@/Freistellung/components/FreistellungsantragCard.vue';
+import { formatFreistellungDateRange } from '@/Freistellung/helpers/formatters.js';
 
 const toast = useToast();
 const store = useFreistellungStore();
@@ -46,23 +47,6 @@ const processedAntraege = computed(() => {
     );
 });
 
-function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-}
-
-function formatDateRange(von, bis) {
-    const vonDate = new Date(von).toDateString();
-    const bisDate = new Date(bis).toDateString();
-    return vonDate === bisDate ? formatDate(von) : `${formatDate(von)} – ${formatDate(bis)}`;
-}
-
-function formatTime(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 function openDialog(antrag, status) {
     selectedAntrag.value = antrag;
     pendingStatus.value = status;
@@ -101,18 +85,6 @@ async function submitDecision() {
         submitting.value = false;
     }
 }
-
-const entscheidungSeverity = {
-    Ausstehend: 'secondary',
-    Genehmigt: 'success',
-    Abgelehnt: 'danger',
-};
-
-const entscheidungLabel = {
-    Ausstehend: 'Ausstehend',
-    Genehmigt: 'Genehmigt',
-    Abgelehnt: 'Abgelehnt',
-};
 </script>
 
 <template>
@@ -128,51 +100,13 @@ const entscheidungLabel = {
     </p>
 
     <div v-else class="flex flex-col gap-4">
-        <div
+        <FreistellungsantragCard
             v-for="antrag in pendingAntraege"
             :key="antrag.id"
-            class="border rounded-lg p-4 shadow-sm"
+            :antrag="antrag"
+            :showStudent="true"
+            :showEntscheidungen="false"
         >
-            <div class="flex items-start justify-between gap-2 mb-2">
-                <div>
-                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
-                    <UserPeek :person="antrag.student" :showGroup="true" />
-                </div>
-                <div class="text-right text-sm whitespace-nowrap">
-                    <Tag severity="info" :value="formatDateRange(antrag.von, antrag.bis)" />
-                    <div class="text-gray-500 mt-1">
-                        {{ formatTime(antrag.von) }} – {{ formatTime(antrag.bis) }}
-                    </div>
-                </div>
-            </div>
-
-            <p class="text-sm mb-3">
-                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
-            </p>
-
-            <table v-if="antrag.betroffeneStunden?.length" class="w-full text-sm mb-3">
-                <thead>
-                    <tr class="text-left border-b text-gray-500">
-                        <th class="py-1 pr-3 font-medium">Datum</th>
-                        <th class="py-1 pr-3 font-medium">Block</th>
-                        <th class="py-1 pr-3 font-medium">Fach</th>
-                        <th class="py-1 font-medium">Lehrkraft</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="s in antrag.betroffeneStunden"
-                        :key="s.id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="py-1 pr-3">{{ formatDate(s.datum) }}</td>
-                        <td class="py-1 pr-3">{{ s.block }}</td>
-                        <td class="py-1 pr-3">{{ s.fach }}</td>
-                        <td class="py-1">{{ formatTutor(s.lehrer) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-
             <div class="flex gap-2">
                 <Button
                     label="Genehmigen"
@@ -189,7 +123,7 @@ const entscheidungLabel = {
                     @click="openDialog(antrag, 'Abgelehnt')"
                 />
             </div>
-        </div>
+        </FreistellungsantragCard>
     </div>
 
     <!-- Already-processed section -->
@@ -200,40 +134,15 @@ const entscheidungLabel = {
     </p>
 
     <div v-else class="flex flex-col gap-4">
-        <div
+        <FreistellungsantragCard
             v-for="antrag in processedAntraege"
             :key="antrag.id"
-            class="border rounded-lg p-4 shadow-sm opacity-80"
-        >
-            <div class="flex items-start justify-between gap-2 mb-2">
-                <div>
-                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
-                    <UserPeek :person="antrag.student" :showGroup="true" />
-                </div>
-                <Tag severity="secondary" :value="formatDateRange(antrag.von, antrag.bis)" />
-            </div>
-
-            <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
-            </p>
-
-            <div class="flex flex-col gap-1">
-                <div
-                    v-for="e in antrag.entscheidungen"
-                    :key="e.id"
-                    class="flex items-center gap-2 text-sm"
-                >
-                    <Tag
-                        :severity="entscheidungSeverity[e.status]"
-                        :value="entscheidungLabel[e.status]"
-                    />
-                    <span>{{ formatTutor(e.lehrer) }}</span>
-                    <span v-if="e.kommentar" class="text-xs text-gray-500 italic">
-                        „{{ e.kommentar }}"
-                    </span>
-                </div>
-            </div>
-        </div>
+            :antrag="antrag"
+            :showStudent="true"
+            :showStunden="false"
+            :muted="true"
+            dateTagSeverity="secondary"
+        />
     </div>
 
     <Dialog
@@ -251,7 +160,7 @@ const entscheidungLabel = {
                 für
                 <strong>{{
                     selectedAntrag
-                        ? formatDateRange(selectedAntrag.von, selectedAntrag.bis)
+                        ? formatFreistellungDateRange(selectedAntrag.von, selectedAntrag.bis)
                         : ''
                 }}</strong>
                 {{ pendingStatus === 'Genehmigt' ? 'genehmigen' : 'ablehnen' }}?
