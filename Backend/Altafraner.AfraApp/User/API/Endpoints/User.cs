@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Altafraner.AfraApp.Backbone.Authorization;
 using Altafraner.AfraApp.User.Domain.DTO;
 using Altafraner.AfraApp.User.Services;
@@ -23,18 +24,20 @@ public static class User
             .AllowAnonymous();
 
         app.MapGet("/api/user",
-            async (UserAccessor userAccessor) =>
+            async (UserAccessor userAccessor, ClaimsPrincipal claimsPrincipal) =>
             {
                 try
                 {
                     var user = await userAccessor.GetUserAsync();
+                    var impersonationId = claimsPrincipal.FindFirst(AfraAppClaimTypes.ImpersonatingUserId)?.Value;
                     return Results.Ok(new PersonLoginInfo
                     {
                         Id = user.Id,
                         Vorname = user.FirstName,
                         Nachname = user.LastName,
                         Rolle = user.Rolle,
-                        Berechtigungen = user.GlobalPermissions.ToArray()
+                        Berechtigungen = user.GlobalPermissions.ToArray(),
+                        ImpersonationId = impersonationId
                     });
                 }
                 catch (InvalidOperationException)
@@ -49,10 +52,18 @@ public static class User
             .RequireAuthorization();
 
         app.MapGet("/api/user/{id:guid}/impersonate",
-                async (UserSigninService userSigninService, ILogger<Program> logger, Guid id) =>
+                async (UserSigninService userSigninService,
+                    ILogger<Program> logger,
+                    Guid id,
+                    UserAccessor userAccessor,
+                    ClaimsPrincipal claimsPrincipal) =>
                 {
-                    logger.LogWarning("Impersonating user with ID {Id}", id);
-                    await userSigninService.SignInAsync(id, rememberMe: false);
+                    var impersonationId = claimsPrincipal.FindFirst(AfraAppClaimTypes.ImpersonatingUserId)?.Value;
+                    var currentUserId = impersonationId is not null
+                        ? Guid.Parse(impersonationId)
+                        : userAccessor.GetUserId();
+                    logger.LogWarning("{oldUser} is Impersonating user with ID {newUser}", currentUserId, id);
+                    await userSigninService.SignInAsync(id, false, currentUserId);
                 })
             .RequireAuthorization(AuthorizationPolicies.AdminOnly);
     }
