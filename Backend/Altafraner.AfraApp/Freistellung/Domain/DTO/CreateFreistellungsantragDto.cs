@@ -11,7 +11,13 @@ public record CreateFreistellungsantragDto
     ///     A short title summarising the reason for the leave.
     /// </summary>
     [MaxLength(200)]
-    public required string Titel { get; init; }
+    public required string Grund { get; init; }
+
+    /// <summary>
+    ///     The reason for the leave.
+    /// </summary>
+    [MaxLength(1000)]
+    public required string Beschreibung { get; init; }
 
     /// <summary>
     ///     The start of the requested leave period (date and time).
@@ -22,12 +28,6 @@ public record CreateFreistellungsantragDto
     ///     The end of the requested leave period (date and time, inclusive).
     /// </summary>
     public required DateTime Bis { get; init; }
-
-    /// <summary>
-    ///     The reason for the leave.
-    /// </summary>
-    [MaxLength(1000)]
-    public required string Grund { get; init; }
 
     /// <summary>
     ///     The individual lessons the student will miss during the leave period.

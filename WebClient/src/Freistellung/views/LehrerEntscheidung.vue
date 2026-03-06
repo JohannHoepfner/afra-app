@@ -5,6 +5,8 @@ import { mande } from 'mande';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import { useFreistellungStore } from '@/Freistellung/stores/freistellung.js';
 import { useUser } from '@/stores/user.ts';
+import UserPeek from '@/components/UserPeek.vue';
+import { formatStudent, formatTutor } from '@/helpers/formatters';
 
 const toast = useToast();
 const store = useFreistellungStore();
@@ -133,13 +135,8 @@ const entscheidungLabel = {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
-                    <span class="ml-2 text-base">
-                        {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
-                    </span>
-                    <span class="ml-2 text-sm text-gray-500">
-                        {{ antrag.student.gruppe ?? '' }}
-                    </span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
+                    <UserPeek :person="antrag.student" :showGroup="true" />
                 </div>
                 <div class="text-right text-sm whitespace-nowrap">
                     <Tag severity="info" :value="formatDateRange(antrag.von, antrag.bis)" />
@@ -150,7 +147,7 @@ const entscheidungLabel = {
             </div>
 
             <p class="text-sm mb-3">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
 
             <table v-if="antrag.betroffeneStunden?.length" class="w-full text-sm mb-3">
@@ -171,7 +168,7 @@ const entscheidungLabel = {
                         <td class="py-1 pr-3">{{ formatDate(s.datum) }}</td>
                         <td class="py-1 pr-3">{{ s.block }}</td>
                         <td class="py-1 pr-3">{{ s.fach }}</td>
-                        <td class="py-1">{{ s.lehrer.nachname }}, {{ s.lehrer.vorname }}</td>
+                        <td class="py-1">{{ formatTutor(s.lehrer) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -210,19 +207,14 @@ const entscheidungLabel = {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
-                    <span class="ml-2 text-base">
-                        {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
-                    </span>
-                    <span class="ml-2 text-sm text-gray-500">
-                        {{ antrag.student.gruppe ?? '' }}
-                    </span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
+                    <UserPeek :person="antrag.student" :showGroup="true" />
                 </div>
                 <Tag severity="secondary" :value="formatDateRange(antrag.von, antrag.bis)" />
             </div>
 
             <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
 
             <div class="flex flex-col gap-1">
@@ -235,7 +227,7 @@ const entscheidungLabel = {
                         :severity="entscheidungSeverity[e.status]"
                         :value="entscheidungLabel[e.status]"
                     />
-                    <span>{{ e.lehrer.nachname }}, {{ e.lehrer.vorname }}</span>
+                    <span>{{ formatTutor(e.lehrer) }}</span>
                     <span v-if="e.kommentar" class="text-xs text-gray-500 italic">
                         „{{ e.kommentar }}"
                     </span>
@@ -253,12 +245,9 @@ const entscheidungLabel = {
         <div class="flex flex-col gap-3">
             <p>
                 Möchtest du den Freistellungsantrag
-                <strong>„{{ selectedAntrag?.titel }}"</strong>
+                <strong>„{{ selectedAntrag?.grund }}"</strong>
                 von
-                <strong>
-                    {{ selectedAntrag?.student?.nachname }},
-                    {{ selectedAntrag?.student?.vorname }}
-                </strong>
+                <strong> {{ formatStudent(selectedAntrag?.student) }} </strong>
                 für
                 <strong>{{
                     selectedAntrag

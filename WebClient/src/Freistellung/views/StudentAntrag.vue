@@ -168,12 +168,7 @@ async function submit() {
         <!-- Title -->
         <div class="flex flex-col gap-1">
             <label for="grund">Kurztitel</label>
-            <InputText
-                id="grund"
-                v-model="grund"
-                :max-length="200"
-                fluid
-            />
+            <InputText id="grund" v-model="grund" :max-length="200" fluid />
         </div>
 
         <div class="flex flex-col gap-1">

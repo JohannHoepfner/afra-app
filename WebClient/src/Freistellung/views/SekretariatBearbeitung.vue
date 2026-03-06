@@ -104,7 +104,7 @@ async function bestaetigen(antragId) {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
                     <span class="ml-2 text-sm text-gray-500">
                         {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
                         {{ antrag.student.gruppe ? `(${antrag.student.gruppe})` : '' }}
@@ -117,7 +117,7 @@ async function bestaetigen(antragId) {
             </div>
 
             <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
 
             <h4 class="font-semibold mb-1 text-sm">Betroffene Stunden:</h4>
@@ -185,7 +185,7 @@ async function bestaetigen(antragId) {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
                     <span class="ml-2 text-sm text-gray-500">
                         {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
                     </span>
@@ -203,7 +203,7 @@ async function bestaetigen(antragId) {
             </div>
 
             <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
         </div>
     </div>

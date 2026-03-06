@@ -2,6 +2,7 @@
 import { Button, Tag, useToast } from 'primevue';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import { useFreistellungStore } from '@/Freistellung/stores/freistellung.js';
+import { formatStudent, formatTutor } from '@/helpers/formatters';
 
 const toast = useToast();
 const store = useFreistellungStore();
@@ -82,7 +83,7 @@ function formatTime(dateStr) {
         >
             <div class="flex items-start justify-between gap-2 mb-1">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
                     <Tag
                         class="ml-2"
                         :severity="statusSeverity[antrag.status]"
@@ -95,7 +96,7 @@ function formatTime(dateStr) {
                 </span>
             </div>
 
-            <p class="text-sm mb-3">{{ antrag.grund }}</p>
+            <p class="text-sm mb-3">{{ antrag.beschreibung }}</p>
 
             <h4 class="font-semibold mb-1 text-sm">Betroffene Stunden:</h4>
             <table v-if="antrag.betroffeneStunden?.length" class="w-full text-sm mb-3">
@@ -116,7 +117,7 @@ function formatTime(dateStr) {
                         <td class="py-1 pr-3">{{ formatDate(s.datum) }}</td>
                         <td class="py-1 pr-3">{{ s.block }}</td>
                         <td class="py-1 pr-3">{{ s.fach }}</td>
-                        <td class="py-1">{{ s.lehrer.nachname }}, {{ s.lehrer.vorname }}</td>
+                        <td class="py-1">{{ formatTutor(s.lehrer) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -128,7 +129,7 @@ function formatTime(dateStr) {
                     :key="e.id"
                     class="flex items-center justify-between text-sm"
                 >
-                    <span>{{ e.lehrer.nachname }}, {{ e.lehrer.vorname }}</span>
+                    <span>{{ formatTutor(e.lehrer) }}</span>
                     <div class="flex items-center gap-2">
                         <Tag
                             :severity="entscheidungSeverity[e.status]"

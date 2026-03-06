@@ -40,7 +40,7 @@ public class FreistellungsService
             throw new ArgumentException(
                 "Der Beginn der Freistellung muss mindestens 5 Tage in der Zukunft liegen.");
 
-        if (string.IsNullOrWhiteSpace(dto.Titel))
+        if (string.IsNullOrWhiteSpace(dto.Grund))
             throw new ArgumentException("A title must be provided.");
 
         foreach (var stunde in dto.Stunden)
@@ -90,10 +90,10 @@ public class FreistellungsService
         var antrag = new Domain.Models.Freistellungsantrag
         {
             Student = student,
-            Grund = dto.Titel.Trim(),
+            Grund = dto.Grund.Trim(),
             Von = DateTime.SpecifyKind(dto.Von, DateTimeKind.Utc),
             Bis = DateTime.SpecifyKind(dto.Bis, DateTimeKind.Utc),
-            Beschreibung = dto.Grund,
+            Beschreibung = dto.Beschreibung,
             BetroffeneStunden = dto.Stunden.Select(s => new Domain.Models.BetroffeneStunde
             {
                 Datum = s.Datum,
@@ -120,7 +120,7 @@ public class FreistellungsService
                  Bitte melde dich in der Afra-App an, um den Antrag zu bearbeiten.
 
                  Titel: {antrag.Grund}
-                 Grund: {dto.Grund}
+                 Grund: {dto.Beschreibung}
                  """,
                 TimeSpan.FromMinutes(5)
             );

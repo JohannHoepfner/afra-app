@@ -4,6 +4,8 @@ import { Button, Tag, useToast } from 'primevue';
 import { mande } from 'mande';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import { useFreistellungStore } from '@/Freistellung/stores/freistellung.js';
+import UserPeek from '@/components/UserPeek.vue';
+import { formatStudent, formatTutor } from '@/helpers/formatters';
 
 const toast = useToast();
 const store = useFreistellungStore();
@@ -102,13 +104,8 @@ async function bestaetigen(antragId) {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
-                    <span class="ml-2 text-base">
-                        {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
-                    </span>
-                    <span class="ml-1 text-sm text-gray-500">
-                        {{ antrag.student.gruppe ?? '' }}
-                    </span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
+                    <UserPeek :person="antrag.student" :showGroup="true" />
                 </div>
                 <div class="text-right text-sm whitespace-nowrap">
                     <Tag severity="warn" :value="formatDateRange(antrag.von, antrag.bis)" />
@@ -119,7 +116,7 @@ async function bestaetigen(antragId) {
             </div>
 
             <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
 
             <h4 class="font-semibold mb-1 text-sm">Betroffene Stunden:</h4>
@@ -141,7 +138,7 @@ async function bestaetigen(antragId) {
                         <td class="py-1 pr-3">{{ formatDate(s.datum) }}</td>
                         <td class="py-1 pr-3">{{ s.block }}</td>
                         <td class="py-1 pr-3">{{ s.fach }}</td>
-                        <td class="py-1">{{ s.lehrer.nachname }}, {{ s.lehrer.vorname }}</td>
+                        <td class="py-1">{{ formatTutor(s.lehrer) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -172,10 +169,8 @@ async function bestaetigen(antragId) {
         >
             <div class="flex items-start justify-between gap-2 mb-2">
                 <div>
-                    <span class="font-semibold text-lg">{{ antrag.titel }}</span>
-                    <span class="ml-2 text-base">
-                        {{ antrag.student.nachname }}, {{ antrag.student.vorname }}
-                    </span>
+                    <span class="font-semibold text-lg">{{ antrag.grund }}</span>
+                    <span class="ml-2 text-base"> {{ formatStudent(antrag.student) }} </span>
                 </div>
                 <div class="flex items-center gap-2">
                     <Tag
@@ -190,7 +185,7 @@ async function bestaetigen(antragId) {
             </div>
 
             <p class="text-sm mb-2">
-                <span class="font-semibold">Grund:</span> {{ antrag.grund }}
+                <span class="font-semibold">Grund:</span> {{ antrag.beschreibung }}
             </p>
         </div>
     </div>
