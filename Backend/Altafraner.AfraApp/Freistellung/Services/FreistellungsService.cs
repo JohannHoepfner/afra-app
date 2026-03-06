@@ -346,8 +346,8 @@ public class FreistellungsService
 
     /// <summary>
     ///     Rejects a leave request from the Sekretariat side with a comment.
-    ///     The request must currently be in <see cref="FreistellungsStatus.AlleLehrerGenehmigt" />
-    ///     or <see cref="FreistellungsStatus.Bestaetigt" /> (edit decision, only if Schulleiter has not yet acted).
+    ///     The request must currently be in <see cref="FreistellungsStatus.AlleLehrerGenehmigt" /> (initial decision)
+    ///     or <see cref="FreistellungsStatus.Bestaetigt" /> (edit a previous confirmation, only before Schulleiter has acted).
     /// </summary>
     public async Task<FreistellungsantragDto> SekretariatAblehnenAsync(Guid antragId, AblehnungDto dto)
     {
