@@ -21,8 +21,6 @@ defineProps({
     showEntscheidungen: { type: Boolean, default: true },
     /** Whether to apply reduced opacity (used for processed/completed cards) */
     muted: { type: Boolean, default: false },
-    /** Optional severity for the date range tag in the header */
-    dateTagSeverity: { type: String, default: 'info' },
     /** Optional status Tag to show (e.g. { severity, value }) */
     statusTag: { type: Object, default: null },
 });
@@ -44,14 +42,7 @@ defineProps({
                 />
             </div>
             <div class="text-right text-sm whitespace-nowrap">
-                <Tag
-                    :severity="dateTagSeverity"
-                    :value="formatFreistellungDateRange(antrag.von, antrag.bis)"
-                />
-                <div class="text-gray-500 mt-1">
-                    {{ formatFreistellungTime(antrag.von) }} –
-                    {{ formatFreistellungTime(antrag.bis) }}
-                </div>
+                <Tag :value="formatFreistellungDateRange(antrag.von, antrag.bis)" />
             </div>
         </div>
 
@@ -63,11 +54,11 @@ defineProps({
             <h4 class="font-semibold mb-1 text-sm">Betroffene Stunden:</h4>
             <table class="w-full text-sm mb-3">
                 <thead>
-                    <tr class="text-left border-b text-gray-500">
-                        <th class="py-1 pr-3 font-medium">Datum</th>
-                        <th class="py-1 pr-3 font-medium">Block</th>
-                        <th class="py-1 pr-3 font-medium">Fach</th>
-                        <th class="py-1 font-medium">Lehrkraft</th>
+                    <tr class="text-left border-b">
+                        <th class="py-1 pr-3">Datum</th>
+                        <th class="py-1 pr-3">Block</th>
+                        <th class="py-1 pr-3">Fach</th>
+                        <th class="py-1 ">Lehrkraft</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -79,7 +70,7 @@ defineProps({
                         <td class="py-1 pr-3">{{ formatFreistellungDate(s.datum) }}</td>
                         <td class="py-1 pr-3">{{ s.block }}</td>
                         <td class="py-1 pr-3">{{ s.fach }}</td>
-                        <td class="py-1">{{ formatTutor(s.lehrer) }}</td>
+                        <UserPeek :person="s.lehrer"/>
                     </tr>
                 </tbody>
             </table>
@@ -104,7 +95,6 @@ defineProps({
                 </div>
             </div>
         </template>
-
         <template v-if="antrag.sekretariatKommentar">
             <div class="mb-2 p-2 rounded border border-red-200 bg-red-50 text-sm">
                 <span class="font-semibold text-red-700">Sekretariat:</span>
@@ -118,8 +108,6 @@ defineProps({
                 <span class="ml-1">{{ antrag.schulleiterKommentar }}</span>
             </div>
         </template>
-
-        <!-- Slot for custom actions (buttons, etc.) -->
         <slot />
     </div>
 </template>

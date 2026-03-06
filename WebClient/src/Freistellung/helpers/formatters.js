@@ -20,7 +20,7 @@ export function formatFreistellungDateRange(von, bis) {
     const bisDate = new Date(bis).toDateString();
     return vonDate === bisDate
         ? formatFreistellungDate(von)
-        : `${formatFreistellungDate(von)} – ${formatFreistellungDate(bis)}`;
+        : `${formatFreistellungDate(von)} ${formatFreistellungTime(von)} – ${formatFreistellungDate(bis)} ${formatFreistellungTime(bis)}`;
 }
 
 /**

@@ -105,7 +105,7 @@ async function submitDecision() {
             :key="antrag.id"
             :antrag="antrag"
             :showStudent="true"
-            :showEntscheidungen="false"
+            :showEntscheidungen="true"
         >
             <div class="flex gap-2">
                 <Button
@@ -139,9 +139,8 @@ async function submitDecision() {
             :key="antrag.id"
             :antrag="antrag"
             :showStudent="true"
-            :showStunden="false"
+            :showStunden="true"
             :muted="true"
-            dateTagSeverity="secondary"
         />
     </div>
 
