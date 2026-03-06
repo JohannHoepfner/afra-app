@@ -64,4 +64,16 @@ public class Freistellungsantrag
     ///     The decisions associated with this request (both teachers and mentors).
     /// </summary>
     public List<LehrerEntscheidung> Entscheidungen { get; set; } = [];
+
+    /// <summary>
+    ///     An optional comment from the Sekretariat when rejecting the request.
+    /// </summary>
+    [MaxLength(500)]
+    public string? SekretariatKommentar { get; set; }
+
+    /// <summary>
+    ///     An optional comment from the Schulleiter when rejecting the request.
+    /// </summary>
+    [MaxLength(500)]
+    public string? SchulleiterKommentar { get; set; }
 }
