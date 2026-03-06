@@ -231,7 +231,8 @@ public class FreistellungsService
             .Where(a => a.Status == FreistellungsStatus.AlleLehrerGenehmigt
                         || a.Status == FreistellungsStatus.Bestaetigt
                         || a.Status == FreistellungsStatus.SchulleiterBestaetigt
-                        || a.Status == FreistellungsStatus.Abgelehnt)
+                        || a.Status == FreistellungsStatus.Abgelehnt
+                        || a.Status == FreistellungsStatus.SekretariatAbgelehnt)
             .OrderByDescending(a => a.Von)
             .ToListAsync();
 
@@ -249,10 +250,12 @@ public class FreistellungsService
         if (antrag is null)
             throw new KeyNotFoundException("Leave request not found.");
 
-        if (antrag.Status != FreistellungsStatus.AlleLehrerGenehmigt)
+        if (antrag.Status != FreistellungsStatus.AlleLehrerGenehmigt
+            && antrag.Status != FreistellungsStatus.SekretariatAbgelehnt)
             throw new InvalidOperationException("This leave request has not been fully approved by all teachers and mentors.");
 
         antrag.Status = FreistellungsStatus.Bestaetigt;
+        antrag.SekretariatKommentar = null;
         await _dbContext.SaveChangesAsync();
 
         // Notify the student that Sekretariat has confirmed
@@ -301,6 +304,7 @@ public class FreistellungsService
             .ThenInclude(e => e.Lehrer)
             .Where(a => a.Status == FreistellungsStatus.Bestaetigt
                         || a.Status == FreistellungsStatus.SchulleiterBestaetigt
+                        || a.Status == FreistellungsStatus.SchulleiterAbgelehnt
                         || a.Status == FreistellungsStatus.Abgelehnt)
             .OrderByDescending(a => a.Von)
             .ToListAsync();
@@ -318,10 +322,12 @@ public class FreistellungsService
         if (antrag is null)
             throw new KeyNotFoundException("Leave request not found.");
 
-        if (antrag.Status != FreistellungsStatus.Bestaetigt)
+        if (antrag.Status != FreistellungsStatus.Bestaetigt
+            && antrag.Status != FreistellungsStatus.SchulleiterAbgelehnt)
             throw new InvalidOperationException("This leave request has not yet been confirmed by the Sekretariat.");
 
         antrag.Status = FreistellungsStatus.SchulleiterBestaetigt;
+        antrag.SchulleiterKommentar = null;
         await _dbContext.SaveChangesAsync();
 
         // Notify the student that their request has been finally approved
@@ -334,6 +340,116 @@ public class FreistellungsService
              """,
             TimeSpan.FromMinutes(5)
         );
+
+        return new FreistellungsantragDto(antrag);
+    }
+
+    /// <summary>
+    ///     Rejects a leave request from the Sekretariat side with a comment.
+    ///     The request must currently be in <see cref="FreistellungsStatus.AlleLehrerGenehmigt" />
+    ///     or <see cref="FreistellungsStatus.Bestaetigt" /> (edit decision, only if Schulleiter has not yet acted).
+    /// </summary>
+    public async Task<FreistellungsantragDto> SekretariatAblehnenAsync(Guid antragId, AblehnungDto dto)
+    {
+        var antrag = await LoadAntragAsync(antragId);
+
+        if (antrag is null)
+            throw new KeyNotFoundException("Leave request not found.");
+
+        if (antrag.Status != FreistellungsStatus.AlleLehrerGenehmigt
+            && antrag.Status != FreistellungsStatus.Bestaetigt)
+            throw new InvalidOperationException(
+                "This leave request cannot be rejected by the Sekretariat in its current state.");
+
+        antrag.Status = FreistellungsStatus.SekretariatAbgelehnt;
+        antrag.SekretariatKommentar = dto.Kommentar.Trim();
+        await _dbContext.SaveChangesAsync();
+
+        await _notificationService.ScheduleNotificationAsync(
+            antrag.Student,
+            "Freistellungsantrag vom Sekretariat abgelehnt",
+            $"""
+             Dein Freistellungsantrag „{antrag.Grund}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Sekretariat abgelehnt.
+             Kommentar: {dto.Kommentar.Trim()}
+             Melde dich in der Afra-App an, um den Antrag einzusehen und ggf. erneut einzureichen.
+             """,
+            TimeSpan.FromMinutes(5)
+        );
+
+        return new FreistellungsantragDto(antrag);
+    }
+
+    /// <summary>
+    ///     Rejects a leave request from the Schulleiter side with a comment.
+    ///     The request must currently be in <see cref="FreistellungsStatus.Bestaetigt" />
+    ///     or <see cref="FreistellungsStatus.SchulleiterBestaetigt" /> (edit decision).
+    /// </summary>
+    public async Task<FreistellungsantragDto> SchulleiterAblehnenAsync(Guid antragId, AblehnungDto dto)
+    {
+        var antrag = await LoadAntragAsync(antragId);
+
+        if (antrag is null)
+            throw new KeyNotFoundException("Leave request not found.");
+
+        if (antrag.Status != FreistellungsStatus.Bestaetigt
+            && antrag.Status != FreistellungsStatus.SchulleiterBestaetigt)
+            throw new InvalidOperationException(
+                "This leave request cannot be rejected by the Schulleiter in its current state.");
+
+        antrag.Status = FreistellungsStatus.SchulleiterAbgelehnt;
+        antrag.SchulleiterKommentar = dto.Kommentar.Trim();
+        await _dbContext.SaveChangesAsync();
+
+        await _notificationService.ScheduleNotificationAsync(
+            antrag.Student,
+            "Freistellungsantrag vom Schulleiter abgelehnt",
+            $"""
+             Dein Freistellungsantrag „{antrag.Grund}" für {FormatDateRange(antrag.Von, antrag.Bis)} wurde vom Schulleiter abgelehnt.
+             Kommentar: {dto.Kommentar.Trim()}
+             Melde dich in der Afra-App an, um den Antrag einzusehen und ggf. erneut einzureichen.
+             """,
+            TimeSpan.FromMinutes(5)
+        );
+
+        return new FreistellungsantragDto(antrag);
+    }
+
+    /// <summary>
+    ///     Allows a student to re-submit a request that was rejected by the Sekretariat or Schulleiter.
+    ///     Moves the status back so the respective role can review it again.
+    /// </summary>
+    public async Task<FreistellungsantragDto> ErneutEinreichenAsync(Person student, Guid antragId)
+    {
+        var antrag = await LoadAntragAsync(antragId);
+
+        if (antrag is null)
+            throw new KeyNotFoundException("Leave request not found.");
+
+        if (antrag.StudentId != student.Id)
+            throw new InvalidOperationException("You can only re-submit your own leave requests.");
+
+        switch (antrag.Status)
+        {
+            case FreistellungsStatus.SekretariatAbgelehnt:
+                antrag.Status = FreistellungsStatus.AlleLehrerGenehmigt;
+                antrag.SekretariatKommentar = null;
+                await _dbContext.SaveChangesAsync();
+
+                await NotifySekretariatIfAllApprovedAsync(antrag);
+                break;
+
+            case FreistellungsStatus.SchulleiterAbgelehnt:
+                antrag.Status = FreistellungsStatus.Bestaetigt;
+                antrag.SchulleiterKommentar = null;
+                await _dbContext.SaveChangesAsync();
+
+                await NotifySchulleiterAsync(antrag);
+                break;
+
+            default:
+                throw new InvalidOperationException(
+                    "This leave request can only be re-submitted if it was rejected by the Sekretariat or Schulleiter.");
+        }
 
         return new FreistellungsantragDto(antrag);
     }
@@ -388,6 +504,25 @@ public class FreistellungsService
                 $"""
                  Der Freistellungsantrag „{antrag.Grund}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde von allen Lehrkräften und Mentor:innen genehmigt.
                  Bitte melde dich in der Afra-App an, um den Antrag abschließend zu bestätigen.
+                 """,
+                TimeSpan.FromMinutes(5)
+            );
+    }
+
+    private async Task NotifySchulleiterAsync(Domain.Models.Freistellungsantrag antrag)
+    {
+        var schulleiter = await _dbContext.Personen
+            .Where(p => p.GlobalPermissions.Contains(GlobalPermission.Schulleiter)
+                        || p.GlobalPermissions.Contains(GlobalPermission.Admin))
+            .ToListAsync();
+
+        foreach (var sl in schulleiter)
+            await _notificationService.ScheduleNotificationAsync(
+                sl,
+                "Freistellungsantrag wartet auf abschließende Genehmigung",
+                $"""
+                 Der Freistellungsantrag „{antrag.Grund}" von {antrag.Student.FirstName} {antrag.Student.LastName} für {FormatDateRange(antrag.Von, antrag.Bis)} wurde erneut eingereicht und wartet auf Ihre Genehmigung.
+                 Bitte melde dich in der Afra-App an, um den Antrag abschließend zu genehmigen.
                  """,
                 TimeSpan.FromMinutes(5)
             );

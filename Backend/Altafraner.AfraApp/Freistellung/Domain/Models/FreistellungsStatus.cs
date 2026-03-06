@@ -32,5 +32,17 @@ public enum FreistellungsStatus
     ///     The Schulleiter has given final approval for the request.
     /// </summary>
     [JsonStringEnumMemberName("SchulleiterBestaetigt")]
-    SchulleiterBestaetigt
+    SchulleiterBestaetigt,
+
+    /// <summary>
+    ///     The Sekretariat has rejected the request (with a comment describing what to fix).
+    /// </summary>
+    [JsonStringEnumMemberName("SekretariatAbgelehnt")]
+    SekretariatAbgelehnt,
+
+    /// <summary>
+    ///     The Schulleiter has rejected the request (with a comment describing what to fix).
+    /// </summary>
+    [JsonStringEnumMemberName("SchulleiterAbgelehnt")]
+    SchulleiterAbgelehnt
 }

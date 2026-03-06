@@ -19,6 +19,7 @@ public static class FreistellungsEndpoints
             .RequireAuthorization(AuthorizationPolicies.StudentOnly);
         student.MapPost("/", CreateAntrag);
         student.MapGet("/", GetAntraegeForStudent);
+        student.MapPut("/{antragId:guid}/erneut-einreichen", ErneutEinreichen);
 
         var lehrer = app.MapGroup("/lehrer")
             .RequireAuthorization(AuthorizationPolicies.TutorOnly);
@@ -29,11 +30,13 @@ public static class FreistellungsEndpoints
             .RequireAuthorization(AuthorizationPolicies.Sekretariat);
         sekretariat.MapGet("/", GetAntraegeForSekretariat);
         sekretariat.MapPut("/{antragId:guid}/bestaetigen", BestaetigeAntrag);
+        sekretariat.MapPut("/{antragId:guid}/ablehnen", SekretariatAblehnen);
 
         var schulleiter = app.MapGroup("/schulleiter")
             .RequireAuthorization(AuthorizationPolicies.Schulleiter);
         schulleiter.MapGet("/", GetAntraegeForSchulleiter);
         schulleiter.MapPut("/{antragId:guid}/bestaetigen", SchulleiterBestaetigen);
+        schulleiter.MapPut("/{antragId:guid}/ablehnen", SchulleiterAblehnen);
     }
 
     private static async Task<IResult> CreateAntrag(
@@ -127,6 +130,26 @@ public static class FreistellungsEndpoints
         }
     }
 
+    private static async Task<IResult> SekretariatAblehnen(
+        FreistellungsService service,
+        Guid antragId,
+        AblehnungDto dto)
+    {
+        try
+        {
+            var result = await service.SekretariatAblehnenAsync(antragId, dto);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
     private static async Task<IResult> GetAntraegeForSchulleiter(
         FreistellungsService service)
     {
@@ -141,6 +164,47 @@ public static class FreistellungsEndpoints
         try
         {
             var result = await service.SchulleiterBestaetigenAsync(antragId);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> SchulleiterAblehnen(
+        FreistellungsService service,
+        Guid antragId,
+        AblehnungDto dto)
+    {
+        try
+        {
+            var result = await service.SchulleiterAblehnenAsync(antragId, dto);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> ErneutEinreichen(
+        FreistellungsService service,
+        UserAccessor userAccessor,
+        Guid antragId)
+    {
+        var student = await userAccessor.GetUserAsync();
+        try
+        {
+            var result = await service.ErneutEinreichenAsync(student, antragId);
             return Results.Ok(result);
         }
         catch (KeyNotFoundException)

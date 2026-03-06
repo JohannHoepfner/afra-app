@@ -22,6 +22,8 @@ public record FreistellungsantragDto
         Status = antrag.Status;
         ErstelltAm = antrag.ErstelltAm;
         Student = new PersonInfoMinimal(antrag.Student);
+        SekretariatKommentar = antrag.SekretariatKommentar;
+        SchulleiterKommentar = antrag.SchulleiterKommentar;
         BetroffeneStunden = antrag.BetroffeneStunden
             .OrderBy(s => s.Datum)
             .ThenBy(s => s.Block)
@@ -68,4 +70,10 @@ public record FreistellungsantragDto
     ///     The decisions associated with this request (both teachers and mentors).
     /// </summary>
     public List<LehrerEntscheidungDto> Entscheidungen { get; init; }
+
+    /// <inheritdoc cref="Models.Freistellungsantrag.SekretariatKommentar" />
+    public string? SekretariatKommentar { get; init; }
+
+    /// <inheritdoc cref="Models.Freistellungsantrag.SchulleiterKommentar" />
+    public string? SchulleiterKommentar { get; init; }
 }
