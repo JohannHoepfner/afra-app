@@ -9,6 +9,7 @@ import KlassenrangeSelector from '@/components/KlassenRangeSelector.vue';
 import { convertMarkdownToHtml } from '@/composables/markdown';
 import { useManagement } from '@/Profundum/composables/verwaltung.ts';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
+import { gql } from '@/composables/graphql';
 
 const props = defineProps({ profundumId: String });
 const toast = useToast();
@@ -37,7 +38,6 @@ const profundum = ref(null);
 const profundaList = ref([]);
 
 const apiProfunda = mande('/api/profundum/management/profundum');
-const apiKategorie = mande('/api/profundum/management/kategorie');
 
 const navItems = computed(() => [
     {
@@ -55,23 +55,63 @@ const navItems = computed(() => [
 ]);
 
 async function loadCategories() {
-    categories.value = await apiKategorie.get();
+    const data = await gql(`
+        {
+            profundumKategorien {
+                id
+                bezeichnung
+                profilProfundum
+            }
+        }
+    `);
+    categories.value = data.profundumKategorien;
 }
 
 async function loadProfundum() {
-    profundum.value = await apiProfunda.get(props.profundumId);
-
-    if (!profundum.value) {
+    const data = await gql(
+        `
+        query GetProfundum($id: UUID!) {
+            profunda(where: { id: { eq: $id } }) {
+                id
+                bezeichnung
+                beschreibung
+                minKlasse
+                maxKlasse
+                kategorie { id }
+                fachbereiche { id }
+                dependencies { id }
+            }
+        }
+    `,
+        { id: props.profundumId },
+    );
+    const result = data.profunda?.[0];
+    if (!result) {
         toast.add({
             severity: 'error',
             summary: 'Nicht gefunden',
             detail: 'Profundum existiert nicht',
         });
+        return;
     }
+    profundum.value = {
+        ...result,
+        kategorieId: result.kategorie?.id ?? null,
+        fachbereichIds: (result.fachbereiche ?? []).map((f) => f.id),
+        dependencyIds: (result.dependencies ?? []).map((d) => d.id),
+    };
 }
 
 async function loadProfundaList() {
-    profundaList.value = await apiProfunda.get();
+    const data = await gql(`
+        {
+            profunda {
+                id
+                bezeichnung
+            }
+        }
+    `);
+    profundaList.value = data.profunda;
 }
 
 async function setup() {

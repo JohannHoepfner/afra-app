@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { mande } from 'mande';
+import { gql } from '@/composables/graphql';
 
 export const useOtiumStore = defineStore('otium', {
     state: () => ({
@@ -12,10 +13,24 @@ export const useOtiumStore = defineStore('otium', {
     actions: {
         async updateKategorien() {
             if (this.kategorien) return;
-            const kategorieGetter = mande('/api/Otium/kategorie');
-
             try {
-                this.kategorien = await kategorieGetter.get();
+                const data = await gql(`
+                    {
+                        otiumKategorien(where: { parent: null }) {
+                            id
+                            bezeichnung
+                            icon
+                            cssColor
+                            children {
+                                id
+                                bezeichnung
+                                icon
+                                cssColor
+                            }
+                        }
+                    }
+                `);
+                this.kategorien = data.otiumKategorien;
             } catch (error) {
                 console.error('Error fetching kategorien', error);
             }

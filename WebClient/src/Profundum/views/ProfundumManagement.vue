@@ -24,6 +24,7 @@ import EinwahlZeitraeume from '@/Profundum/components/EinwahlZeitraeume.vue';
 import Slots from '@/Profundum/components/Slots.vue';
 import { useManagement } from '@/Profundum/composables/verwaltung.ts';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
+import { gql } from '@/composables/graphql';
 
 const navItems = [
     {
@@ -117,13 +118,28 @@ function deleteProfundum(event, data) {
 }
 
 async function getProfunda() {
-    const getter = mande('/api/profundum/management/profundum');
-    profunda.value = await getter.get();
+    const data = await gql(`
+        {
+            profunda {
+                id
+                bezeichnung
+            }
+        }
+    `);
+    profunda.value = data.profunda;
 }
 
 async function getKategorien() {
-    const getter = mande('/api/profundum/management/kategorie');
-    categories.value = await getter.get();
+    const data = await gql(`
+        {
+            profundumKategorien {
+                id
+                bezeichnung
+                profilProfundum
+            }
+        }
+    `);
+    categories.value = data.profundumKategorien;
 }
 
 async function getFachbereiche() {

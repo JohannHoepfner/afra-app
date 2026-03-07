@@ -2,6 +2,7 @@ import { useToast } from 'primevue';
 import { mande, type MandeError } from 'mande';
 import type { QuartalEnrollmentOverview } from '@/Profundum/models/feedback';
 import type { ProfundumFachbereich, ProfundumSlot } from '@/Profundum/models/verwaltung';
+import { gql } from '@/composables/graphql';
 
 export const useManagement = () => {
     const toast = useToast();
@@ -24,27 +25,49 @@ export const useManagement = () => {
 
     async function getFachbereiche(): Promise<ProfundumFachbereich[]> {
         try {
-            return await api.get('/fachbereich');
+            const data = await gql<{ profundumFachbereiche: ProfundumFachbereich[] }>(`
+                {
+                    profundumFachbereiche {
+                        id
+                        label
+                    }
+                }
+            `);
+            return data.profundumFachbereiche;
         } catch (e) {
-            const mandeError: MandeError = e;
             toast.add({
                 summary: 'Es ist ein Fehler aufgetreten',
-                detail: `Die verfügbaren Kategorien der Profunda konnten nicht geladen werden. Code ${mandeError.response.status}, ${mandeError.message}`,
+                detail: `Die verfügbaren Fachbereiche der Profunda konnten nicht geladen werden.`,
             });
-            return null;
+            return [];
         }
     }
 
     async function getSlots(): Promise<ProfundumSlot[]> {
         try {
-            return await api.get('/slot');
+            const data = await gql<{ profundumSlots: ProfundumSlot[] }>(`
+                {
+                    profundumSlots {
+                        id
+                        jahr
+                        quartal
+                        wochentag
+                        einwahlZeitraum {
+                            id
+                        }
+                    }
+                }
+            `);
+            return data.profundumSlots.map((s) => ({
+                ...s,
+                einwahlZeitraumId: s.einwahlZeitraum?.id ?? '',
+            }));
         } catch (e) {
-            const mandeError: MandeError = e;
             toast.add({
                 summary: 'Es ist ein Fehler aufgetreten',
-                detail: `Die verfügbaren Slots der Profunda konnten nicht geladen werden. Code ${mandeError.response.status}, ${mandeError.message}`,
+                detail: `Die verfügbaren Slots der Profunda konnten nicht geladen werden.`,
             });
-            return null;
+            return [];
         }
     }
 
