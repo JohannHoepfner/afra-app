@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Mime;
 using Altafraner.AfraApp.Backbone.Authorization;
 using Altafraner.AfraApp.Otium.Domain.Contracts.Services;
 using Altafraner.AfraApp.Otium.Domain.DTO;
@@ -25,6 +26,7 @@ public static class Management
             .RequireAuthorization(AuthorizationPolicies.TutorOnly);
 
         group.MapGet("/supervision/now", GetNowSupervising);
+        group.MapGet("/supervision/{blockId:guid}/emergency.pdf", GetEmergencyPdf);
 
         group.MapGet("/otium", GetOtia);
         group.MapGet("/otium/{otiumId:guid}", GetOtium);
@@ -646,6 +648,45 @@ public static class Management
                     Datum = b.SchultagKey
                 };
             });
+    }
+
+    private static async Task<IResult> GetEmergencyPdf(Guid blockId,
+        IAttendanceService attendanceService, BlockHelper blockHelper,
+        Altafraner.Typst.Typst typst, AfraAppContext dbContext)
+    {
+        var block = await dbContext.Blocks.AsNoTracking().FirstOrDefaultAsync(b => b.Id == blockId);
+        if (block is null) return Results.NotFound("Block nicht gefunden");
+
+        var schema = blockHelper.Get(block.SchemaId);
+        if (schema is null) return Results.NotFound("Block-Schema nicht gefunden");
+
+        var (termine, missingPersons, _) = await attendanceService.GetAttendanceForBlockAsync(blockId);
+
+        var now = DateTime.Now;
+        var data = new
+        {
+            titel = $"Otium Notfall-Backup {now:yyyy-MM-dd HH:mm}",
+            zeitpunkt = now.ToString("dd.MM.yyyy HH:mm"),
+            block = schema.Bezeichnung,
+            fehlende = missingPersons
+                .OrderBy(p => p.Key.LastName)
+                .ThenBy(p => p.Key.FirstName)
+                .Select(p => new { nachname = p.Key.LastName, vorname = p.Key.FirstName, status = p.Value.ToString() }),
+            termine = termine
+                .Select(t => new
+                {
+                    ort = t.Key.Ort,
+                    bezeichnung = t.Key.Bezeichnung,
+                    einschreibungen = t.Value
+                        .OrderBy(e => e.Key.LastName)
+                        .ThenBy(e => e.Key.FirstName)
+                        .Select(e => new { nachname = e.Key.LastName, vorname = e.Key.FirstName, status = e.Value.ToString() })
+                })
+        };
+
+        var pdf = typst.GeneratePdf(Altafraner.Typst.Templates.Otium.Emergency, data);
+        return TypedResults.File(pdf, MediaTypeNames.Application.Pdf,
+            $"Otium-Notfall-{now:yyyy-MM-dd-HHmm}.pdf");
     }
 
     private static async Task<bool> MayEditAsync(UserAuthorizationHelper authHelper,
