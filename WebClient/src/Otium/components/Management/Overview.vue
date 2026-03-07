@@ -10,6 +10,7 @@ import { RouterLink } from 'vue-router';
 import AfraKategorieTag from '@/Otium/components/Shared/AfraKategorieTag.vue';
 import CreateOtiumForm from '@/Otium/components/Management/CreateOtiumForm.vue';
 import { useConfirmPopover } from '@/composables/confirmPopover';
+import { gql } from '@/composables/graphql';
 
 const user = useUser();
 const settings = useOtiumStore();
@@ -21,8 +22,25 @@ const createDialogOpen = ref(false);
 const otia = ref([]);
 
 async function getOtia() {
-    const getter = mande('/api/otium/management/otium');
-    otia.value = await getter.get();
+    const data = await gql(`
+        {
+            otia {
+                id
+                bezeichnung
+                kategorie {
+                    id
+                }
+                termine {
+                    id
+                }
+            }
+        }
+    `);
+    otia.value = data.otia.map((o) => ({
+        ...o,
+        kategorie: o.kategorie?.id,
+        termine: o.termine?.length ?? 0,
+    }));
 }
 
 async function deleteOtium(id) {

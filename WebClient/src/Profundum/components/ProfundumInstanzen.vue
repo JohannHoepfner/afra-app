@@ -14,13 +14,13 @@ import { useConfirmPopover } from '@/composables/confirmPopover';
 import Dialog from 'primevue/dialog';
 import { formatSlot, formatStudent } from '@/helpers/formatters.ts';
 import AfraPersonSelector from '@/Otium/components/Form/AfraPersonSelector.vue';
+import { gql } from '@/composables/graphql';
 
 const props = defineProps({ profundumId: String });
 const toast = useToast();
 const confirm = useConfirmPopover();
 
 const apiInstanz = mande('/api/profundum/management/instanz');
-const apiSlots = mande('/api/profundum/management/slot');
 
 const instanzen = ref([]);
 const slots = ref([]);
@@ -38,13 +38,49 @@ const dialogVisible = ref(null);
 const createDialogVisible = ref(false);
 
 async function load() {
-    slots.value = (await apiSlots.get()).map((slot) => ({
+    const data = await gql(
+        `
+        query GetInstanzenAndSlots($profundumId: UUID!) {
+            profundumSlots {
+                id
+                jahr
+                quartal
+                wochentag
+                einwahlZeitraum { id }
+            }
+            profundumInstanzen(where: { profundum: { id: { eq: $profundumId } } }) {
+                id
+                maxEinschreibungen
+                ort
+                slots { id }
+                verantwortliche {
+                    id
+                    firstName
+                    lastName
+                }
+            }
+        }
+    `,
+        { profundumId: props.profundumId },
+    );
+
+    slots.value = (data.profundumSlots ?? []).map((slot) => ({
         ...slot,
+        einwahlZeitraumId: slot.einwahlZeitraum?.id ?? '',
         label: formatSlot(slot),
     }));
-    instanzen.value = (await apiInstanz.get()).filter(
-        (x) => x.profundumId === props.profundumId,
-    );
+
+    instanzen.value = (data.profundumInstanzen ?? []).map((inst) => ({
+        ...inst,
+        slots: (inst.slots ?? []).map((s) => s.id),
+        verantwortlicheIds: (inst.verantwortliche ?? []).map((v) => v.id),
+        verantwortlicheInfo: (inst.verantwortliche ?? []).map((v) => ({
+            id: v.id,
+            vorname: v.firstName,
+            nachname: v.lastName,
+        })),
+    }));
+
     loading.value = false;
 }
 

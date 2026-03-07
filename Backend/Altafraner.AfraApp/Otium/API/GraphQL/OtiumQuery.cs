@@ -16,7 +16,7 @@ public static class OtiumQuery
     [UseProjection]
     [UseFiltering]
     [UseSorting]
-    public static IQueryable<OtiumKategorie> GetKategorien([Service] AfraAppContext dbContext)
+    public static IQueryable<OtiumKategorie> GetOtiumKategorien([Service] AfraAppContext dbContext)
         => dbContext.OtiaKategorien;
 
     /// <summary>
@@ -27,4 +27,22 @@ public static class OtiumQuery
     [UseSorting]
     public static IQueryable<OtiumDefinition> GetOtia([Service] AfraAppContext dbContext)
         => dbContext.Otia;
+
+    /// <summary>
+    ///     Returns all Otium appointments (Termine).
+    /// </summary>
+    [UseProjection]
+    [UseFiltering]
+    [UseSorting]
+    public static IQueryable<OtiumTermin> GetOtiumTermine([Service] AfraAppContext dbContext)
+        => dbContext.OtiaTermine;
+
+    /// <summary>
+    ///     Returns all Otium recurrence rules (Wiederholungen).
+    /// </summary>
+    [UseProjection]
+    [UseFiltering]
+    [UseSorting]
+    public static IQueryable<OtiumWiederholung> GetOtiumWiederholungen([Service] AfraAppContext dbContext)
+        => dbContext.OtiaWiederholungen;
 }

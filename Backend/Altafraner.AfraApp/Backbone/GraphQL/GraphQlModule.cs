@@ -1,4 +1,5 @@
 using Altafraner.AfraApp.Otium.API.GraphQL;
+using Altafraner.AfraApp.Profundum.API.GraphQL;
 using Altafraner.Backbone.Abstractions;
 
 namespace Altafraner.AfraApp.Backbone.GraphQL;
@@ -15,7 +16,7 @@ public class GraphQlModule : IModule
     {
         services
             .AddGraphQLServer()
-            .AddTypes(typeof(OtiumQuery))
+            .AddTypes(typeof(OtiumQuery), typeof(ProfundumQuery))
             .AddProjections()
             .AddFiltering()
             .AddSorting();
