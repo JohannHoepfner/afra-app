@@ -1,5 +1,5 @@
 <script setup>
-import { ref, Suspense } from 'vue';
+import { computed, ref, Suspense } from 'vue';
 import { Button } from 'primevue';
 import AfraOtiumSupervisionView from '@/Otium/components/Supervision/AfraOtiumSupervisionView.vue';
 import { useRoute } from 'vue-router';
@@ -27,6 +27,8 @@ const status = ref(route.query.blockId !== undefined);
 const blocksAvailable = ref();
 const blockSelected = ref();
 
+const activeBlockId = computed(() => route.query.blockId ?? blockSelected.value?.id);
+
 function start(block) {
     blockSelected.value = block;
     status.value = true;
@@ -50,13 +52,24 @@ await setup();
     <nav-breadcrumb :items="navItems" />
     <div class="flex justify-between items-center">
         <h1>Aufsicht</h1>
-        <Button
-            v-if="status && route.query.blockId === undefined"
-            icon="pi pi-stop"
-            label="Block Wechseln"
-            severity="secondary"
-            @click="stop"
-        />
+        <div class="flex gap-2">
+            <Button
+                v-if="status && activeBlockId"
+                as="a"
+                :href="`/api/otium/management/supervision/${activeBlockId}/emergency.pdf`"
+                icon="pi pi-file-pdf"
+                label="Notfall-PDF"
+                severity="secondary"
+                download
+            />
+            <Button
+                v-if="status && route.query.blockId === undefined"
+                icon="pi pi-stop"
+                label="Block Wechseln"
+                severity="secondary"
+                @click="stop"
+            />
+        </div>
     </div>
 
     <div v-if="!status">
