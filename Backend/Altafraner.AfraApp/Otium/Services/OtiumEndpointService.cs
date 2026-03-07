@@ -510,6 +510,57 @@ internal class OtiumEndpointService
     }
 
     /// <summary>
+    ///     Gets attendance-vs-capacity statistics for all Otia, grouped by Otium.
+    ///     Only non-cancelled Termine whose attendance has been checked are included.
+    /// </summary>
+    public async Task<IEnumerable<AttendanceStatisticsView>> GetAttendanceStatisticsAsync()
+    {
+        var termine = await _dbContext.OtiaTermine
+            .AsSplitQuery()
+            .Where(t => t.SindAnwesenheitenKontrolliert && !t.IstAbgesagt)
+            .Include(t => t.Block).ThenInclude(b => b.Schultag)
+            .Include(t => t.Otium)
+            .OrderBy(t => t.Block.Schultag.Datum)
+            .ToListAsync();
+
+        if (termine.Count == 0) return [];
+
+        var terminIds = termine.Select(t => t.Id).ToList();
+        var attendanceCounts = await _attendanceService.GetAttendanceCountsForTermineAsync(terminIds);
+
+        // Keep only termine that have an attendance record before grouping
+        var termineWithCounts = termine.Where(t => attendanceCounts.ContainsKey(t.Id)).ToList();
+        if (termineWithCounts.Count == 0) return [];
+
+        return termineWithCounts
+            .GroupBy(t => t.Otium.Id)
+            .Select(g =>
+            {
+                var dataPoints = g
+                    .Select(t =>
+                    {
+                        var (anwesend, eingeschrieben) = attendanceCounts[t.Id];
+                        var kapazitaet = t.MaxEinschreibungen ?? eingeschrieben;
+                        return new AttendanceDataPoint
+                        {
+                            Datum = t.Block.Schultag.Datum,
+                            AnzahlAnwesend = anwesend,
+                            Kapazitaet = kapazitaet,
+                            Auslastung = kapazitaet > 0 ? anwesend * 100.0 / kapazitaet : 0
+                        };
+                    })
+                    .ToList();
+
+                return new AttendanceStatisticsView
+                {
+                    OtiumId = g.Key,
+                    Bezeichnung = g.First().Otium.Bezeichnung,
+                    DataPoints = dataPoints
+                };
+            });
+    }
+
+    /// <summary>
     ///     Gets a single Otium
     /// </summary>
     /// <param name="otiumId">The ID of the Otium to get.</param>

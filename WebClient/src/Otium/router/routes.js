@@ -45,6 +45,11 @@ export const routes = [
         props: true,
     },
     {
+        path: '/management/statistik',
+        name: 'Verwaltung-Statistik',
+        component: () => import('@/Otium/views/Management/Statistik.vue'),
+    },
+    {
         path: '/management/schuljahr/neu',
         name: 'Verwaltung-Schuljahr-Neu',
         component: () => import('@/Otium/components/Schuljahr/CreateSchoolyear.vue'),
