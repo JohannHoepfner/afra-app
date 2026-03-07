@@ -1,3 +1,4 @@
+using Altafraner.AfraApp.Backbone.GraphQL;
 using System.Globalization;
 using Altafraner.AfraApp;
 using Altafraner.AfraApp.Backbone.Authorization;
@@ -32,6 +33,8 @@ builder.UseAltafranerBackbone(configure: altafranerBuilder => altafranerBuilder
     .AddModule<ProfundumModule>()
     .AddModule<AuthorizationModule>()
     .AddModule<EmergencyBackupModule>()
+// GraphQL
+    .AddModule<GraphQlModule>()
 // Backbone modules
     .AddModule<CookieAuthenticationModule>()
     .AddModule<DataProtectionModule<AfraAppContext>>()
