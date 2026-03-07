@@ -20,7 +20,8 @@ public record ManagementTerminView
     ///     Construct a ManagementTerminView from a Database Termin
     /// </summary>
     [SetsRequiredMembers]
-    public ManagementTerminView(OtiumTermin termin, string block)
+    public ManagementTerminView(OtiumTermin termin, string block, int anzahlEinschreibungen = 0,
+        double? durchschnittlicheAnwesenheit = null, int? anzahlAnwesend = null)
     {
         Id = termin.Id;
         OtiumId = termin.Otium.Id;
@@ -34,6 +35,9 @@ public record ManagementTerminView
         Block = block;
         Bezeichnung = termin.OverrideBezeichnung;
         Beschreibung = termin.OverrideBeschreibung;
+        AnzahlEinschreibungen = anzahlEinschreibungen;
+        DurchschnittlicheAnwesenheit = durchschnittlicheAnwesenheit;
+        AnzahlAnwesend = anzahlAnwesend;
     }
 
     /// <summary>
@@ -95,4 +99,21 @@ public record ManagementTerminView
     ///     A one time override description for the Otium Termin
     /// </summary>
     public string? Beschreibung { get; set; }
+
+    /// <summary>
+    ///     The number of enrollments for the Termin.
+    /// </summary>
+    public int AnzahlEinschreibungen { get; set; }
+
+    /// <summary>
+    ///     The average attendance rate for this Termin as a percentage (0–100).
+    ///     Null if attendance has not been checked yet.
+    /// </summary>
+    public double? DurchschnittlicheAnwesenheit { get; set; }
+
+    /// <summary>
+    ///     The number of enrolled students who were marked as present for this Termin.
+    ///     Null if attendance has not been checked yet.
+    /// </summary>
+    public int? AnzahlAnwesend { get; set; }
 }

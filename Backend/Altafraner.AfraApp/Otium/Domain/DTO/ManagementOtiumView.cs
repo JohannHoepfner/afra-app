@@ -34,4 +34,10 @@ public record ManagementOtiumView
 
     /// <inheritdoc cref="OtiumDefinition.MaxKlasse"/>
     public int? MaxKlasse { get; set; } = null;
+
+    /// <summary>
+    ///     The average attendance rate across all checked Termine of this OtiumDefinition as a percentage (0–100).
+    ///     Null if no Termine have had their attendance checked yet.
+    /// </summary>
+    public double? DurchschnittlicheAnwesenheit { get; set; }
 }

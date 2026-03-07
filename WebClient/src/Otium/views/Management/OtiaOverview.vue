@@ -8,6 +8,7 @@ import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
+import AuslastungsStatistik from '@/Otium/components/Management/AuslastungsStatistik.vue';
 import { ref } from 'vue';
 
 const user = useUser();
@@ -40,6 +41,7 @@ const navItems = ref([
             <TabList>
                 <Tab value="0">Otium</Tab>
                 <Tab value="1">Schultage</Tab>
+                <Tab v-if="user.isOtiumsverantwortlich" value="2">Auslastung</Tab>
             </TabList>
             <TabPanels>
                 <TabPanel value="0">
@@ -47,6 +49,9 @@ const navItems = ref([
                 </TabPanel>
                 <TabPanel value="1">
                     <SchuljahrOverview />
+                </TabPanel>
+                <TabPanel v-if="user.isOtiumsverantwortlich" value="2">
+                    <AuslastungsStatistik />
                 </TabPanel>
             </TabPanels>
         </Tabs>

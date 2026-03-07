@@ -184,6 +184,59 @@ public class AttendanceService : IAttendanceService
     }
 
     /// <inheritdoc />
+    public async Task<Dictionary<Guid, (int Anwesend, int Eingeschrieben)>> GetAttendanceCountsForTermineAsync(
+        IEnumerable<Guid> terminIds)
+    {
+        var terminIdList = terminIds.ToList();
+        if (terminIdList.Count == 0) return [];
+
+        // EF Core translates t.Block.Id to the FK column directly (no JOIN needed).
+        var terminBlockIds = await _dbContext.OtiaTermine
+            .Where(t => terminIdList.Contains(t.Id))
+            .Select(t => new { TerminId = t.Id, BlockId = t.Block.Id })
+            .ToDictionaryAsync(t => t.TerminId, t => t.BlockId);
+
+        var blockIds = terminBlockIds.Values.Distinct().ToList();
+
+        var enrolledStudents = await _dbContext.OtiaEinschreibungen
+            .Where(e => terminIdList.Contains(e.Termin.Id))
+            .Select(e => new { TerminId = e.Termin.Id, StudentId = e.BetroffenePerson.Id })
+            .ToListAsync();
+
+        var enrolledByTermin = enrolledStudents
+            .GroupBy(e => e.TerminId)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.StudentId).ToHashSet());
+
+        var allEnrolledStudentIds = enrolledStudents.Select(e => e.StudentId).Distinct().ToList();
+
+        var anwesenheitByBlock = new Dictionary<Guid, HashSet<Guid>>();
+        if (blockIds.Count > 0 && allEnrolledStudentIds.Count > 0)
+        {
+            var anwesenheiten = await _dbContext.OtiaAnwesenheiten
+                .Where(a => blockIds.Contains(a.BlockId) &&
+                            allEnrolledStudentIds.Contains(a.StudentId) &&
+                            a.Status == OtiumAnwesenheitsStatus.Anwesend)
+                .Select(a => new { a.StudentId, a.BlockId })
+                .ToListAsync();
+            anwesenheitByBlock = anwesenheiten
+                .GroupBy(a => a.BlockId)
+                .ToDictionary(g => g.Key, g => g.Select(a => a.StudentId).ToHashSet());
+        }
+
+        var result = new Dictionary<Guid, (int Anwesend, int Eingeschrieben)>();
+        foreach (var terminId in terminIdList)
+        {
+            if (!terminBlockIds.TryGetValue(terminId, out var blockId))
+                continue;
+            var enrolled = enrolledByTermin.GetValueOrDefault(terminId, []);
+            var anwesendInBlock = anwesenheitByBlock.GetValueOrDefault(blockId, []);
+            result[terminId] = (enrolled.Count(s => anwesendInBlock.Contains(s)), enrolled.Count);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
     public async Task SetAttendanceForEnrollmentAsync(Guid enrollmentId, OtiumAnwesenheitsStatus status)
     {
         var einschreibung = _dbContext.OtiaEinschreibungen

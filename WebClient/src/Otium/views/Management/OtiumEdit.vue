@@ -20,6 +20,7 @@ import Grid from '@/components/Form/Grid.vue';
 import GridEditRow from '@/components/Form/GridEditRow.vue';
 import AfraOtiumRegTable from '@/Otium/components/Management/AfraOtiumRegTable.vue';
 import AfraOtiumDateTable from '@/Otium/components/Management/AfraOtiumDateTable.vue';
+import AfraAnwesenheitsChart from '@/Otium/components/Management/AfraAnwesenheitsChart.vue';
 import NavBreadcrumb from '@/components/NavBreadcrumb.vue';
 import KlassenrangeSelector from '@/components/KlassenRangeSelector.vue';
 
@@ -408,6 +409,8 @@ setup();
                 </template>
             </GridEditRow>
         </Grid>
+        <h2>Anwesenheit</h2>
+        <AfraAnwesenheitsChart :termine="otium.termine ?? []" />
         <Accordion multiple value="">
             <AccordionPanel value="0">
                 <AccordionHeader>Termine</AccordionHeader>

@@ -24,6 +24,9 @@ public static class Management
         var group = app.MapGroup("/management")
             .RequireAuthorization(AuthorizationPolicies.TutorOnly);
 
+        group.MapGet("/statistics", GetAttendanceStatistics)
+            .RequireAuthorization(AuthorizationPolicies.Otiumsverantwortlich);
+
         group.MapGet("/supervision/now", GetNowSupervising);
 
         group.MapGet("/otium", GetOtia);
@@ -78,9 +81,15 @@ public static class Management
         return Results.Ok(otia);
     }
 
-    private static IResult GetOtium(OtiumEndpointService service, Guid otiumId)
+    private static async Task<IResult> GetAttendanceStatistics(OtiumEndpointService service)
     {
-        var otium = service.GetOtium(otiumId);
+        var stats = await service.GetAttendanceStatisticsAsync();
+        return Results.Ok(stats);
+    }
+
+    private static async Task<IResult> GetOtium(OtiumEndpointService service, Guid otiumId)
+    {
+        var otium = await service.GetOtiumAsync(otiumId);
         return Results.Ok(otium);
     }
 
