@@ -20,7 +20,7 @@ public static class Enrollment
         group.MapPost("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor, Dictionary<String, Guid[]> wuensche) =>
             await svc.RegisterBelegWunschAsync(await userAccessor.GetUserAsync(), wuensche)
         );
-        group.MapGet("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor) => svc.GetKatalog(await userAccessor.GetUserAsync()));
+        group.MapGet("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor) => await svc.GetKatalogAsync(await userAccessor.GetUserAsync()));
         group.MapGet("/einschreibungen", GetEnrollmentsAsync);
     }
 
@@ -31,9 +31,13 @@ public static class Enrollment
         var user = await userAccessor.GetUserAsync();
 
         var now = DateTime.UtcNow;
-        var einwahlZeitraum = dbContext.ProfundumEinwahlZeitraeume
+        var einwahlZeitraum = await dbContext.ProfundumEinwahlZeitraeume
+            .AsNoTracking()
             .Include(ez => ez.Slots)
-            .First(ez => ez.EinwahlStart <= now && now < ez.EinwahlStop);
+            .FirstOrDefaultAsync(ez => ez.EinwahlStart <= now && now < ez.EinwahlStop);
+        if (einwahlZeitraum is null)
+            return Results.Ok(new Dictionary<string, object>());
+
         var slots = einwahlZeitraum.Slots.Select(s => s.Id).ToArray();
 
         return Results.Ok(await svc.GetEnrollment(user, slots));

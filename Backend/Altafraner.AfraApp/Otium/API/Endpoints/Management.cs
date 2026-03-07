@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Altafraner.AfraApp.Backbone.Authorization;
+using Altafraner.AfraApp.Domain;
 using Altafraner.AfraApp.Otium.Domain.Contracts.Services;
 using Altafraner.AfraApp.Otium.Domain.DTO;
 using Altafraner.AfraApp.Otium.Domain.Models;
@@ -72,16 +73,23 @@ public static class Management
         return terminForTeacher is null ? Results.BadRequest() : Results.Ok(terminForTeacher);
     }
 
-    private static IResult GetOtia(OtiumEndpointService service)
+    private static async Task<IResult> GetOtia(OtiumEndpointService service)
     {
-        var otia = service.GetOtia();
+        var otia = await service.GetOtiaAsync();
         return Results.Ok(otia);
     }
 
-    private static IResult GetOtium(OtiumEndpointService service, Guid otiumId)
+    private static async Task<IResult> GetOtium(OtiumEndpointService service, Guid otiumId)
     {
-        var otium = service.GetOtium(otiumId);
-        return Results.Ok(otium);
+        try
+        {
+            var otium = await service.GetOtiumAsync(otiumId);
+            return Results.Ok(otium);
+        }
+        catch (NotFoundException e)
+        {
+            return Results.NotFound(e.Message);
+        }
     }
 
     private static async Task<IResult> CreateOtium(OtiumEndpointService service, ManagementOtiumCreation otium)
