@@ -30,15 +30,16 @@ setup();
 </script>
 
 <template>
-    <p class="mb-4 text-surface-500 text-sm">
+    <p class="mb-3 text-surface-500 text-sm">
         Anwesenheiten relativ zur Kapazität aller Otia über die Zeit. Jede Linie entspricht einem
-        Otium; die Y-Achse zeigt die prozentualen Anwesenheiten bezogen auf die Kapazität.
+        Otium; die Y-Achse zeigt die prozentualen Anwesenheiten bezogen auf die Kapazität. Otia
+        können über die Legende ein- und ausgeblendet werden.
     </p>
     <template v-if="!loading">
         <AfraAuslastungsChart :series="series" />
     </template>
     <template v-else>
-        <div class="h-[220px] flex items-center justify-center text-surface-400">Lade…</div>
+        <div class="h-[420px] flex items-center justify-center text-surface-400">Lade…</div>
     </template>
 </template>
 
