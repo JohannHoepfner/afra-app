@@ -1,0 +1,70 @@
+{
+    "name": "Afra-App",
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+    "workspaceFolder": "/workspaces/afra-app",
+
+    "features": {
+        "ghcr.io/devcontainers/features/dotnet:2": {
+            "version": "lts"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        },
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+
+    "forwardPorts": [5173, 5043, 5432, 8090, 1025, 8000],
+    "portsAttributes": {
+        "5173": {
+            "label": "WebClient (Vite)",
+            "onAutoForward": "openBrowser"
+        },
+        "5043": {
+            "label": "Backend API",
+            "onAutoForward": "notify"
+        },
+        "5432": {
+            "label": "PostgreSQL",
+            "onAutoForward": "silent"
+        },
+        "8090": {
+            "label": "Mailcatcher",
+            "onAutoForward": "notify"
+        },
+        "1025": {
+            "label": "SMTP",
+            "onAutoForward": "silent"
+        },
+        "8000": {
+            "label": "Emergency Backup Service",
+            "onAutoForward": "silent"
+        }
+    },
+
+    "remoteEnv": {
+        "ConnectionStrings__DefaultConnection": "Host=localhost;Database=afra-app;Username=AfraAppUser;Password=AfraAppPassword;",
+        "SMTP__Host": "localhost",
+        "EmergencyBackup__BaseUri": "http://localhost:8000/"
+    },
+
+    "postCreateCommand": "bash ${containerWorkspaceFolder}/dev/setup.sh ${containerWorkspaceFolder}",
+    "postStartCommand": "docker compose -f ${containerWorkspaceFolder}/dev/compose.yaml up -d",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csharp",
+                "ms-dotnettools.csdevkit",
+                "Vue.volar",
+                "rust-lang.rust-analyzer",
+                "esbenp.prettier-vscode",
+                "dbaeumer.vscode-eslint",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "dotnet.defaultSolution": "Backend/Afra-App.slnx"
+            }
+        }
+    }
+}
