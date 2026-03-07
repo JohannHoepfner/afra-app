@@ -17,6 +17,11 @@ public static class Enrollment
     {
         var group = app.MapGroup("/sus")
             .RequireAuthorization(AuthorizationPolicies.MittelStufeStudentOnly);
+        group.MapGet("/einwahl/aktiv", (AfraAppContext db) =>
+        {
+            var now = DateTime.UtcNow;
+            return db.ProfundumEinwahlZeitraeume.Any(ez => ez.EinwahlStart <= now && now < ez.EinwahlStop);
+        });
         group.MapPost("/wuensche", async (ProfundumEnrollmentService svc, UserAccessor userAccessor, Dictionary<String, Guid[]> wuensche) =>
             await svc.RegisterBelegWunschAsync(await userAccessor.GetUserAsync(), wuensche)
         );
