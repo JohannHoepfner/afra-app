@@ -31,6 +31,7 @@ public class EmailSchedulingModule<TPerson> : IModule<EmailSchedulingSettings<TP
                    throw new InvalidOperationException("Module not configured");
         });
 
+        services.AddScoped<IEmailNotificationService, EmailNotificationService<TPerson>>();
         services.AddScoped<INotificationService, EmailNotificationService<TPerson>>();
     }
 }

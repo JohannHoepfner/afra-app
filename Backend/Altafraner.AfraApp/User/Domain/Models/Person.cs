@@ -100,6 +100,11 @@ public class Person : IEmailRecipient
     ///
     public List<ProfundumInstanz> BetreuteProfunda { get; set; } = null!;
 
+    /// <summary>
+    ///     Whether the user wants to receive notifications via email.
+    /// </summary>
+    public bool ReceiveEmailNotifications { get; set; } = true;
+
     /// <inheritdoc />
     public override string ToString()
     {

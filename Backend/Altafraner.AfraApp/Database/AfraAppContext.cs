@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Altafraner.AfraApp.Calendar.Domain.Models;
+using Altafraner.AfraApp.Notifications.Domain.Models;
 using Altafraner.AfraApp.Otium.Domain.Models;
 using Altafraner.AfraApp.Profundum.Domain.Models;
 using Altafraner.AfraApp.Profundum.Domain.Models.Bewertung;
@@ -160,6 +161,16 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
     public DbSet<CalendarSubscription> CalendarSubscriptions { get; set; }
 
     /// <summary>
+    ///     In-app notifications for all users.
+    /// </summary>
+    public DbSet<InAppNotification> InAppNotifications { get; set; }
+
+    /// <summary>
+    ///     Web Push subscriptions for all users.
+    /// </summary>
+    public DbSet<PushSubscription> PushSubscriptions { get; set; }
+
+    /// <summary>
     ///     Configures the npgsql specific options for the context
     /// </summary>
     internal static Action<NpgsqlDbContextOptionsBuilder> ConfigureNpgsql =>
@@ -187,6 +198,10 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
 
         modelBuilder.Entity<Person>()
             .PrimitiveCollection(p => p.GlobalPermissions);
+
+        modelBuilder.Entity<Person>()
+            .Property(p => p.ReceiveEmailNotifications)
+            .HasDefaultValue(true);
 
         modelBuilder.Entity<MentorMenteeRelation>()
             .HasKey(r => new { r.MentorId, r.StudentId, r.Type });
@@ -301,6 +316,23 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
         });
 
         modelBuilder.Entity<CalendarSubscription>(s => { s.HasOne(b => b.BetroffenePerson).WithMany(); });
+
+        modelBuilder.Entity<InAppNotification>(n =>
+        {
+            n.HasOne(e => e.Recipient)
+                .WithMany()
+                .HasForeignKey(e => e.RecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PushSubscription>(p =>
+        {
+            p.HasOne(e => e.Person)
+                .WithMany()
+                .HasForeignKey(e => e.PersonId)
+                .OnDelete(DeleteBehavior.Cascade);
+            p.HasIndex(e => e.Endpoint).IsUnique();
+        });
 
         modelBuilder.Entity<ProfundumFeedbackKategorie>(e =>
         {
