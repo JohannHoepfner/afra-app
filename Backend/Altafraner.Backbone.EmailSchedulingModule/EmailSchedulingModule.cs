@@ -32,6 +32,5 @@ public class EmailSchedulingModule<TPerson> : IModule<EmailSchedulingSettings<TP
         });
 
         services.AddScoped<IEmailNotificationService, EmailNotificationService<TPerson>>();
-        services.AddScoped<INotificationService, EmailNotificationService<TPerson>>();
     }
 }

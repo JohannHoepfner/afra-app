@@ -1,4 +1,5 @@
 using Altafraner.AfraApp.Notifications.Domain.DTO;
+using Altafraner.Backbone.EmailSchedulingModule;
 using Altafraner.AfraApp.Notifications.Services;
 using Altafraner.AfraApp.User.Services;
 using Microsoft.EntityFrameworkCore;
@@ -83,8 +84,6 @@ public static class NotificationEndpoints
                 return Results.NoContent();
             });
 
-        // -- Web Push --
-
         group.MapGet("vapid-public-key",
             (IConfiguration config) =>
             {
@@ -106,15 +105,14 @@ public static class NotificationEndpoints
                 return Results.NoContent();
             });
 
-        // -- Test --
-
         group.MapPost("test",
-            async (IInAppNotificationService svc, UserAccessor userAccessor) =>
+            async (INotificationService svc, UserAccessor userAccessor) =>
             {
-                await svc.SendInAppNotificationAsync(
+                await svc.ScheduleNotificationAsync(
                     userAccessor.GetUserId(),
                     "Testbenachrichtigung",
-                    "Das Benachrichtigungssystem funktioniert korrekt.");
+                    "Das Benachrichtigungssystem funktioniert korrekt.",
+                    TimeSpan.Zero);
                 return Results.NoContent();
             });
     }
