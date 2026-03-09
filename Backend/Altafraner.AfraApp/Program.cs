@@ -17,6 +17,7 @@ using Altafraner.Backbone.Defaults;
 using Altafraner.Backbone.EmailOutbox;
 using Altafraner.Backbone.EmailSchedulingModule;
 using Altafraner.Backbone.Scheduling;
+using Altafraner.Backbone.WebNotifications;
 using Microsoft.AspNetCore.Diagnostics;
 
 CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfoByIetfLanguageTag("de-DE");
@@ -39,6 +40,8 @@ builder.UseAltafranerBackbone(configure: altafranerBuilder => altafranerBuilder
     .AddModule<DataProtectionModule<AfraAppContext>>()
     .AddModule<EmailOutboxModule>()
     .AddModuleAndConfigure<EmailSchedulingModule<Person>, EmailSchedulingSettings<Person>>(settings =>
+        settings.WithDbContextStore<AfraAppContext>())
+    .AddModuleAndConfigure<WebNotificationsModule<Person>, VapidConfiguration<Person>>(settings =>
         settings.WithDbContextStore<AfraAppContext>())
     .AddModule<DefaultsModule>()
     .AddModule<ReverseProxyHandlerModule>()
