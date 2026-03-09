@@ -1,4 +1,4 @@
-namespace Altafraner.AfraApp.Notifications.Services;
+namespace Altafraner.Backbone.WebNotifications.Services;
 
 /// <summary>
 ///     Thrown when a Web Push service returns 404 or 410, indicating the subscription

@@ -2,22 +2,27 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Altafraner.AfraApp.Notifications.Services;
+namespace Altafraner.Backbone.WebNotifications.Services;
 
 /// <summary>
 ///     Sends Web Push notifications using VAPID authentication (RFC 8292) and
 ///     <c>aes128gcm</c> content encryption (RFC 8188 / RFC 8291).
 ///     No third-party library is used; only .NET BCL cryptography primitives.
 /// </summary>
-internal sealed class WebPushSender
+internal sealed class WebPushSender<TPerson> where TPerson : class, IWebNotificationRecipient
+
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<WebPushSender> _logger;
+    private readonly ILogger<WebPushSender<TPerson>> _logger;
 
-    // VAPID state — null when no VAPID config is present (push silently disabled).
-    private readonly bool _isEnabled;
+    /// <summary>
+    ///     <see langword="true" /> when VAPID keys are configured and push can be sent.
+    /// </summary>
+    public bool IsEnabled { get; private init; }
+
     private readonly string _subject = string.Empty;
     private readonly string _publicKeyBase64Url = string.Empty; // original URL-safe base64 (65 bytes)
     private readonly byte[] _publicKeyX = [];                   // 32-byte X coordinate
@@ -25,13 +30,13 @@ internal sealed class WebPushSender
     private readonly byte[] _privateKeyD = [];                  // 32-byte private scalar
 
     /// <summary>
-    ///     Constructs a new <see cref="WebPushSender" />.
+    ///     Constructs a new <see cref="WebPushSender{TPerson}" />.
     ///     Push delivery is silently disabled when the VAPID config section is absent or incomplete.
     /// </summary>
     public WebPushSender(
-        IOptions<VapidConfiguration> config,
+        IOptions<VapidConfiguration<TPerson>> config,
         IHttpClientFactory httpClientFactory,
-        ILogger<WebPushSender> logger)
+        ILogger<WebPushSender<TPerson>> logger)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -39,7 +44,7 @@ internal sealed class WebPushSender
         var cfg = config.Value;
         if (string.IsNullOrEmpty(cfg.PublicKey) || string.IsNullOrEmpty(cfg.PrivateKey))
         {
-            _isEnabled = false;
+            IsEnabled = false;
             return;
         }
 
@@ -68,13 +73,8 @@ internal sealed class WebPushSender
         _publicKeyY = pubKeyBytes[33..65];
         _privateKeyD = privKeyBytes;
         _subject = cfg.Subject ?? string.Empty;
-        _isEnabled = true;
+        IsEnabled = true;
     }
-
-    /// <summary>
-    ///     Returns <see langword="true" /> when VAPID keys are configured and push can be sent.
-    /// </summary>
-    public bool IsEnabled => _isEnabled;
 
     /// <summary>
     ///     Sends a single Web Push notification.
@@ -86,27 +86,24 @@ internal sealed class WebPushSender
     /// <exception cref="PushSubscriptionGoneException">
     ///     Thrown when the push service returns 404 or 410 (subscription expired).
     /// </exception>
-    public async Task SendAsync(string endpoint, string p256dhBase64Url, string authBase64Url, string jsonPayload)
+    public async Task SendAsync(Uri endpoint, string p256dhBase64Url, string authBase64Url, string jsonPayload)
     {
-        if (!_isEnabled)
+        if (!IsEnabled)
             return;
 
-        var uaPublicKey = Base64UrlDecode(p256dhBase64Url); // 65-byte uncompressed P-256 point
-        var authSecret = Base64UrlDecode(authBase64Url);    // 16-byte auth secret
+        var uaPublicKey = Base64UrlDecode(p256dhBase64Url);
+        var authSecret = Base64UrlDecode(authBase64Url);
 
-        // Encrypt the payload per RFC 8291 + RFC 8188 (aes128gcm).
         var body = EncryptPayload(Encoding.UTF8.GetBytes(jsonPayload), uaPublicKey, authSecret);
 
-        // Build the VAPID JWT per RFC 8292.
         var audience = GetAudience(endpoint);
         var jwt = CreateVapidJwt(audience);
 
         var client = _httpClientFactory.CreateClient("WebPush");
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
 
-        // Authorization: vapid t=<JWT>,k=<VAPID-public-key>
         request.Headers.TryAddWithoutValidation("Authorization", $"vapid t={jwt},k={_publicKeyBase64Url}");
-        request.Headers.TryAddWithoutValidation("TTL", "86400");     // deliver within 24 h
+        request.Headers.TryAddWithoutValidation("TTL", "86400");
         request.Headers.TryAddWithoutValidation("Urgency", "normal");
 
         request.Content = new ByteArrayContent(body);
@@ -118,7 +115,7 @@ internal sealed class WebPushSender
         if (response.StatusCode is System.Net.HttpStatusCode.Gone
             or System.Net.HttpStatusCode.NotFound)
         {
-            throw new PushSubscriptionGoneException(endpoint);
+            throw new PushSubscriptionGoneException(endpoint.ToString());
         }
 
         if (!response.IsSuccessStatusCode)
@@ -131,18 +128,14 @@ internal sealed class WebPushSender
         }
     }
 
-    // ── VAPID JWT  (RFC 8292) ────────────────────────────────────────────────
-
     private string CreateVapidJwt(string audience)
     {
-        // Header and payload are standard JWT, serialised as base64url JSON.
         var header = Base64UrlEncode("""{"typ":"JWT","alg":"ES256"}"""u8.ToArray());
         var exp = DateTimeOffset.UtcNow.AddHours(12).ToUnixTimeSeconds();
         var payload = Base64UrlEncode(
             Encoding.UTF8.GetBytes(
                 JsonSerializer.Serialize(new { aud = audience, exp, sub = _subject })));
 
-        // Sign header.payload with ES256 (ECDSA-P256-SHA256).
         var signingInput = Encoding.ASCII.GetBytes($"{header}.{payload}");
         var ecParams = new ECParameters
         {
@@ -151,7 +144,7 @@ internal sealed class WebPushSender
             D = _privateKeyD,
         };
         using var ecdsa = ECDsa.Create(ecParams);
-        // IeeeP1363FixedFieldConcatenation produces the R||S format required by JWT ES256.
+
         var signature = ecdsa.SignData(
             signingInput, HashAlgorithmName.SHA256,
             DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
@@ -163,35 +156,29 @@ internal sealed class WebPushSender
 
     private static byte[] EncryptPayload(byte[] plaintext, byte[] uaPublicKey, byte[] authSecret)
     {
-        // The aes128gcm record size. A single record can hold at most rs-1 bytes of content
-        // (the last byte is the delimiter). Validate that the payload fits.
         const int rs = 4096;
         if (plaintext.Length > rs - 1)
             throw new ArgumentException(
                 $"Push notification payload ({plaintext.Length} bytes) exceeds the maximum of {rs - 1} bytes.",
                 nameof(plaintext));
 
-        // 1. Generate an ephemeral ECDH key pair (application-server key for this message).
         using var asKey = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
         var asParams = asKey.ExportParameters(includePrivateParameters: false);
 
         if (asParams.Q.X is null || asParams.Q.Y is null)
             throw new InvalidOperationException("ECDiffieHellman did not produce a valid public key.");
 
-        // Encode as uncompressed EC point: 0x04 || X(32) || Y(32).
         var asPublicKey = new byte[65];
         asPublicKey[0] = 0x04;
         asParams.Q.X.CopyTo(asPublicKey.AsSpan(1));
         asParams.Q.Y.CopyTo(asPublicKey.AsSpan(33));
 
-        // 2. Import user-agent public key for ECDH.
         using var uaDh = ECDiffieHellman.Create(new ECParameters
         {
             Curve = ECCurve.NamedCurves.nistP256,
             Q = new ECPoint { X = uaPublicKey[1..33], Y = uaPublicKey[33..65] },
         });
 
-        // 3. Compute ECDH shared secret (x-coordinate of the shared point).
         var sharedSecret = asKey.DeriveRawSecretAgreement(uaDh.PublicKey);
 
         // 4. Derive IKM per RFC 8291 § 3.3.
@@ -205,7 +192,6 @@ internal sealed class WebPushSender
         var prk1 = HKDF.Extract(HashAlgorithmName.SHA256, ikm: sharedSecret, salt: authSecret);
         var ikm = HKDF.Expand(HashAlgorithmName.SHA256, prk: prk1, outputLength: 32, info: keyInfo);
 
-        // 5. Generate a random 16-byte salt and derive the AES key + nonce.
         var salt = RandomNumberGenerator.GetBytes(16);
         var prk2 = HKDF.Extract(HashAlgorithmName.SHA256, ikm: ikm, salt: salt);
         var aesKey = HKDF.Expand(HashAlgorithmName.SHA256, prk: prk2, outputLength: 16,
@@ -213,19 +199,18 @@ internal sealed class WebPushSender
         var aesNonce = HKDF.Expand(HashAlgorithmName.SHA256, prk: prk2, outputLength: 12,
             info: "Content-Encoding: nonce\0"u8.ToArray());
 
-        // 6. Append the last-record delimiter (0x02) per RFC 8188 § 2.5.
         var record = new byte[plaintext.Length + 1];
         plaintext.CopyTo(record.AsSpan());
         record[^1] = 0x02;
 
-        // 7. Encrypt with AES-128-GCM (16-byte authentication tag).
         var ciphertext = new byte[record.Length];
         var tag = new byte[16];
         using var aes = new AesGcm(aesKey, tagSizeInBytes: 16);
         aes.Encrypt(aesNonce, record, ciphertext, tag);
 
-        // 8. Build the content-coding header per RFC 8188 § 2.1.
-        //    salt(16) || rs(4 BE) || idlen(1) || keyid(65)
+        // +-----------+--------+-----------+---------------+
+        // | salt (16) | rs (4) | idlen (1) | keyid (idlen) |
+        // +-----------+--------+-----------+---------------+
         Span<byte> header = stackalloc byte[16 + 4 + 1 + 65];
         salt.CopyTo(header);
         header[16] = unchecked((byte)(rs >> 24));
@@ -235,7 +220,6 @@ internal sealed class WebPushSender
         header[20] = 65; // key id length = uncompressed P-256 point
         asPublicKey.CopyTo(header[21..]);
 
-        // 9. Concatenate header || ciphertext || tag.
         var result = new byte[header.Length + ciphertext.Length + tag.Length];
         header.CopyTo(result.AsSpan());
         ciphertext.CopyTo(result.AsSpan(header.Length));
@@ -244,11 +228,8 @@ internal sealed class WebPushSender
         return result;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static string GetAudience(string endpoint)
+    private static string GetAudience(Uri uri)
     {
-        var uri = new Uri(endpoint);
         return $"{uri.Scheme}://{uri.Authority}";
     }
 

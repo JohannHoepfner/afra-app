@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Altafraner.AfraApp.Notifications.API.Hubs;
+namespace Altafraner.Backbone.WebNotifications.API.Hubs;
 
 /// <summary>
 ///     A SignalR hub that delivers real-time in-app notifications to authenticated users.

@@ -1,33 +1,31 @@
 using System.Text.Json;
-using Altafraner.AfraApp.Notifications.API.Hubs;
-using Altafraner.AfraApp.Notifications.Domain.Models;
+using Altafraner.Backbone.WebNotifications.API.Hubs;
+using Altafraner.Backbone.WebNotifications.Domain.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using AppPushSubscription = Altafraner.AfraApp.Notifications.Domain.Models.PushSubscription;
+using Microsoft.Extensions.Logging;
 
-namespace Altafraner.AfraApp.Notifications.Services;
+namespace Altafraner.Backbone.WebNotifications.Services;
 
 /// <summary>
 ///     Stores in-app notifications in the database, delivers them in real time via SignalR,
 ///     and sends Web Push messages when the user has active push subscriptions.
 /// </summary>
-internal class InAppNotificationService : IInAppNotificationService
+internal class InAppNotificationService<TPerson> : IInAppNotificationService<TPerson> where TPerson : class, IWebNotificationRecipient
 {
-    private readonly AfraAppContext _db;
+    private readonly IWebNotificationContext<TPerson> _dbContext;
     private readonly IHubContext<NotificationHub, INotificationHubClient> _hub;
-    private readonly ILogger<InAppNotificationService> _logger;
-    private readonly WebPushSender _webPushSender;
+    private readonly ILogger<InAppNotificationService<TPerson>> _logger;
+    private readonly WebPushSender<TPerson> _webPushSender;
 
-    /// <summary>
-    ///     Constructs a new <see cref="InAppNotificationService" />.
-    /// </summary>
+    ///
     public InAppNotificationService(
-        AfraAppContext db,
+        IWebNotificationContext<TPerson> db,
         IHubContext<NotificationHub, INotificationHubClient> hub,
-        ILogger<InAppNotificationService> logger,
-        WebPushSender webPushSender)
+        ILogger<InAppNotificationService<TPerson>> logger,
+        WebPushSender<TPerson> webPushSender)
     {
-        _db = db;
+        _dbContext = db;
         _hub = hub;
         _logger = logger;
         _webPushSender = webPushSender;
@@ -36,7 +34,7 @@ internal class InAppNotificationService : IInAppNotificationService
     /// <inheritdoc />
     public async Task SendInAppNotificationAsync(Guid recipientId, string subject, string body)
     {
-        var notification = new InAppNotification
+        var notification = new InAppNotification<TPerson>
         {
             Id = Guid.CreateVersion7(),
             RecipientId = recipientId,
@@ -45,8 +43,11 @@ internal class InAppNotificationService : IInAppNotificationService
             CreatedAt = DateTime.UtcNow
         };
 
-        _db.InAppNotifications.Add(notification);
-        await _db.SaveChangesAsync();
+        _dbContext.InAppNotifications.Add(notification);
+
+        if (_dbContext is not DbContext contextActions)
+            throw new InvalidOperationException("The supplied database does not support this operation.");
+        await contextActions.SaveChangesAsync();
 
         // Push real-time update via SignalR to all connections of this user.
         await _hub.Clients.User(recipientId.ToString())
@@ -61,9 +62,9 @@ internal class InAppNotificationService : IInAppNotificationService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<InAppNotification>> GetNotificationsAsync(Guid userId)
+    public async Task<IReadOnlyList<InAppNotification<TPerson>>> GetNotificationsAsync(Guid userId)
     {
-        return await _db.InAppNotifications
+        return await _dbContext.InAppNotifications
             .Where(n => n.RecipientId == userId && n.DismissedAt == null)
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
@@ -76,7 +77,9 @@ internal class InAppNotificationService : IInAppNotificationService
         if (notification.ReadAt is null)
         {
             notification.ReadAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            if (_dbContext is not DbContext contextActions)
+                throw new InvalidOperationException("The supplied database does not support this operation.");
+            await contextActions.SaveChangesAsync();
         }
     }
 
@@ -86,13 +89,15 @@ internal class InAppNotificationService : IInAppNotificationService
         var notification = await GetOwnedNotificationAsync(notificationId, userId);
         notification.DismissedAt = DateTime.UtcNow;
         notification.ReadAt ??= DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        if (_dbContext is not DbContext contextActions)
+            throw new InvalidOperationException("The supplied database does not support this operation.");
+        await contextActions.SaveChangesAsync();
     }
 
     /// <inheritdoc />
     public async Task SavePushSubscriptionAsync(Guid userId, string endpoint, string p256dh, string auth)
     {
-        var existing = await _db.PushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == endpoint);
+        var existing = await _dbContext.PushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == endpoint);
         if (existing is not null)
         {
             // Update the keys in case they changed.
@@ -102,7 +107,7 @@ internal class InAppNotificationService : IInAppNotificationService
         }
         else
         {
-            _db.PushSubscriptions.Add(new AppPushSubscription
+            _dbContext.PushSubscriptions.Add(new PushSubscription<TPerson>
             {
                 Id = Guid.CreateVersion7(),
                 PersonId = userId,
@@ -113,18 +118,22 @@ internal class InAppNotificationService : IInAppNotificationService
             });
         }
 
-        await _db.SaveChangesAsync();
+        if (_dbContext is not DbContext contextActions)
+            throw new InvalidOperationException("The supplied database does not support this operation.");
+        await contextActions.SaveChangesAsync();
     }
 
     /// <inheritdoc />
     public async Task RemovePushSubscriptionAsync(Guid userId, string endpoint)
     {
-        var sub = await _db.PushSubscriptions
+        var sub = await _dbContext.PushSubscriptions
             .FirstOrDefaultAsync(s => s.PersonId == userId && s.Endpoint == endpoint);
         if (sub is not null)
         {
-            _db.PushSubscriptions.Remove(sub);
-            await _db.SaveChangesAsync();
+            _dbContext.PushSubscriptions.Remove(sub);
+            if (_dbContext is not DbContext contextActions)
+                throw new InvalidOperationException("The supplied database does not support this operation.");
+            await contextActions.SaveChangesAsync();
         }
     }
 
@@ -132,7 +141,7 @@ internal class InAppNotificationService : IInAppNotificationService
     {
         if (!_webPushSender.IsEnabled) return;
 
-        var subscriptions = await _db.PushSubscriptions
+        var subscriptions = await _dbContext.PushSubscriptions
             .Where(s => s.PersonId == recipientId)
             .ToListAsync();
 
@@ -145,7 +154,7 @@ internal class InAppNotificationService : IInAppNotificationService
         {
             try
             {
-                await _webPushSender.SendAsync(sub.Endpoint, sub.P256dh, sub.Auth, payload);
+                await _webPushSender.SendAsync(new Uri(sub.Endpoint), sub.P256dh, sub.Auth, payload);
             }
             catch (PushSubscriptionGoneException)
             {
@@ -159,17 +168,19 @@ internal class InAppNotificationService : IInAppNotificationService
 
         if (staleEndpoints.Count > 0)
         {
-            var toRemove = await _db.PushSubscriptions
+            var toRemove = await _dbContext.PushSubscriptions
                 .Where(s => staleEndpoints.Contains(s.Endpoint))
                 .ToListAsync();
-            _db.PushSubscriptions.RemoveRange(toRemove);
-            await _db.SaveChangesAsync();
+            _dbContext.PushSubscriptions.RemoveRange(toRemove);
+            if (_dbContext is not DbContext contextActions)
+                throw new InvalidOperationException("The supplied database does not support this operation.");
+            await contextActions.SaveChangesAsync();
         }
     }
 
-    private async Task<InAppNotification> GetOwnedNotificationAsync(Guid notificationId, Guid userId)
+    private async Task<InAppNotification<TPerson>> GetOwnedNotificationAsync(Guid notificationId, Guid userId)
     {
-        var notification = await _db.InAppNotifications
+        var notification = await _dbContext.InAppNotifications
             .FirstOrDefaultAsync(n => n.Id == notificationId && n.RecipientId == userId);
         return notification ?? throw new KeyNotFoundException($"Notification {notificationId} not found.");
     }

@@ -1,11 +1,9 @@
-using Altafraner.AfraApp.User.Domain.Models;
-
-namespace Altafraner.AfraApp.Notifications.Domain.Models;
+namespace Altafraner.Backbone.WebNotifications.Domain.Models;
 
 /// <summary>
 ///     An in-app notification stored for a specific user.
 /// </summary>
-public class InAppNotification
+public class InAppNotification<TPerson> where TPerson : class, IWebNotificationRecipient
 {
     /// <summary>
     ///     The unique identifier for this notification.
@@ -20,7 +18,7 @@ public class InAppNotification
     /// <summary>
     ///     The recipient person.
     /// </summary>
-    public Person Recipient { get; set; } = null!;
+    public TPerson Recipient { get; set; } = null!;
 
     /// <summary>
     ///     A short notification title.

@@ -1,4 +1,4 @@
-namespace Altafraner.AfraApp.Notifications.API.Hubs;
+namespace Altafraner.Backbone.WebNotifications.API.Hubs;
 
 /// <summary>
 ///     The client-side interface for the <see cref="NotificationHub" />.

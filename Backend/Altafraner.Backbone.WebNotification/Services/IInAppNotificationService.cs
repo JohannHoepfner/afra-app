@@ -1,11 +1,12 @@
-using Altafraner.AfraApp.Notifications.Domain.Models;
+using Altafraner.Backbone.WebNotifications.Domain.Models;
 
-namespace Altafraner.AfraApp.Notifications.Services;
+namespace Altafraner.Backbone.WebNotifications.Services;
 
 /// <summary>
 ///     Service for managing in-app notifications.
 /// </summary>
-public interface IInAppNotificationService
+public interface IInAppNotificationService<TPerson> where TPerson : class, IWebNotificationRecipient
+
 {
     /// <summary>
     ///     Creates and delivers an in-app notification to the specified recipient.
@@ -15,7 +16,7 @@ public interface IInAppNotificationService
     /// <summary>
     ///     Returns all non-dismissed notifications for the specified user, newest first.
     /// </summary>
-    Task<IReadOnlyList<InAppNotification>> GetNotificationsAsync(Guid userId);
+    Task<IReadOnlyList<InAppNotification<TPerson>>> GetNotificationsAsync(Guid userId);
 
     /// <summary>
     ///     Marks a notification as read.

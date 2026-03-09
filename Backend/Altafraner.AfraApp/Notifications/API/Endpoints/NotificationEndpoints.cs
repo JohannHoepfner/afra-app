@@ -1,7 +1,8 @@
-using Altafraner.AfraApp.Notifications.Domain.DTO;
-using Altafraner.Backbone.EmailSchedulingModule;
 using Altafraner.AfraApp.Notifications.Services;
+using Altafraner.AfraApp.User.Domain.Models;
 using Altafraner.AfraApp.User.Services;
+using Altafraner.Backbone.WebNotifications.Domain.DTO;
+using Altafraner.Backbone.WebNotifications.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Altafraner.AfraApp.Notifications.API.Endpoints;
@@ -20,7 +21,7 @@ public static class NotificationEndpoints
 
         // -- Notification listing and management --
 
-        group.MapGet("", async (IInAppNotificationService svc, UserAccessor userAccessor) =>
+        group.MapGet("", async (IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
         {
             var userId = userAccessor.GetUserId();
             var notifications = await svc.GetNotificationsAsync(userId);
@@ -34,7 +35,7 @@ public static class NotificationEndpoints
             }));
         });
 
-        group.MapPut("{id:guid}/read", async (Guid id, IInAppNotificationService svc, UserAccessor userAccessor) =>
+        group.MapPut("{id:guid}/read", async (Guid id, IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
         {
             try
             {
@@ -47,7 +48,7 @@ public static class NotificationEndpoints
             }
         });
 
-        group.MapDelete("{id:guid}", async (Guid id, IInAppNotificationService svc, UserAccessor userAccessor) =>
+        group.MapDelete("{id:guid}", async (Guid id, IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
         {
             try
             {
@@ -92,14 +93,14 @@ public static class NotificationEndpoints
             });
 
         group.MapPost("push-subscription",
-            async (PushSubscriptionDto dto, IInAppNotificationService svc, UserAccessor userAccessor) =>
+            async (PushSubscriptionDto dto, IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
             {
                 await svc.SavePushSubscriptionAsync(userAccessor.GetUserId(), dto.Endpoint, dto.P256dh, dto.Auth);
                 return Results.NoContent();
             });
 
         group.MapPost("push-subscription/unsubscribe",
-            async (PushSubscriptionDto dto, IInAppNotificationService svc, UserAccessor userAccessor) =>
+            async (PushSubscriptionDto dto, IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
             {
                 await svc.RemovePushSubscriptionAsync(userAccessor.GetUserId(), dto.Endpoint);
                 return Results.NoContent();

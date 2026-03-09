@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Altafraner.AfraApp.Calendar.Domain.Models;
-using Altafraner.AfraApp.Notifications.Domain.Models;
 using Altafraner.AfraApp.Otium.Domain.Models;
 using Altafraner.AfraApp.Profundum.Domain.Models;
 using Altafraner.AfraApp.Profundum.Domain.Models.Bewertung;
@@ -8,6 +7,8 @@ using Altafraner.AfraApp.Schuljahr.Domain.Models;
 using Altafraner.AfraApp.User.Domain.Models;
 using Altafraner.Backbone.EmailSchedulingModule;
 using Altafraner.Backbone.EmailSchedulingModule.Models;
+using Altafraner.Backbone.WebNotifications;
+using Altafraner.Backbone.WebNotifications.Domain.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -18,7 +19,7 @@ namespace Altafraner.AfraApp;
 /// <summary>
 ///     The database context for the Afra-App
 /// </summary>
-public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEmailContext<Person>
+public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEmailContext<Person>, IWebNotificationContext<Person>
 {
     /// <inheritdoc />
     public AfraAppContext(DbContextOptions<AfraAppContext> options) : base(options)
@@ -163,12 +164,12 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
     /// <summary>
     ///     In-app notifications for all users.
     /// </summary>
-    public DbSet<InAppNotification> InAppNotifications { get; set; }
+    public DbSet<InAppNotification<Person>> InAppNotifications { get; set; }
 
     /// <summary>
     ///     Web Push subscriptions for all users.
     /// </summary>
-    public DbSet<PushSubscription> PushSubscriptions { get; set; }
+    public DbSet<PushSubscription<Person>> PushSubscriptions { get; set; }
 
     /// <summary>
     ///     Configures the npgsql specific options for the context
@@ -317,7 +318,7 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
 
         modelBuilder.Entity<CalendarSubscription>(s => { s.HasOne(b => b.BetroffenePerson).WithMany(); });
 
-        modelBuilder.Entity<InAppNotification>(n =>
+        modelBuilder.Entity<InAppNotification<Person>>(n =>
         {
             n.HasOne(e => e.Recipient)
                 .WithMany()
@@ -325,7 +326,7 @@ public class AfraAppContext : DbContext, IDataProtectionKeyContext, IScheduledEm
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<PushSubscription>(p =>
+        modelBuilder.Entity<PushSubscription<Person>>(p =>
         {
             p.HasOne(e => e.Person)
                 .WithMany()

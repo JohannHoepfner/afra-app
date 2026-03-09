@@ -6,7 +6,7 @@ using Altafraner.AfraApp.Schuljahr.Domain.Models;
 using Altafraner.AfraApp.Schuljahr.Services;
 using Altafraner.AfraApp.User.Domain.Models;
 using Altafraner.AfraApp.User.Services;
-using Altafraner.Backbone.EmailSchedulingModule;
+using Altafraner.AfraApp.Notifications.Services;
 using Altafraner.Backbone.Scheduling;
 using Altafraner.Backbone.Utils;
 using Microsoft.EntityFrameworkCore;

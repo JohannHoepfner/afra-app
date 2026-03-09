@@ -1,12 +1,11 @@
 using System.ComponentModel.DataAnnotations;
-using Altafraner.AfraApp.User.Domain.Models;
 
-namespace Altafraner.AfraApp.Notifications.Domain.Models;
+namespace Altafraner.Backbone.WebNotifications.Domain.Models;
 
 /// <summary>
 ///     A stored Web Push subscription for a specific user.
 /// </summary>
-public class PushSubscription
+public class PushSubscription<TPerson> where TPerson : class, IWebNotificationRecipient
 {
     /// <summary>
     ///     The unique identifier for this subscription.
@@ -21,7 +20,7 @@ public class PushSubscription
     /// <summary>
     ///     The subscribing person.
     /// </summary>
-    public Person Person { get; set; } = null!;
+    public TPerson Person { get; set; } = null!;
 
     /// <summary>
     ///     The push service endpoint URL.
