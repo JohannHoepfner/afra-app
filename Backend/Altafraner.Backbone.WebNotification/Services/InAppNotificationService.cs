@@ -18,7 +18,9 @@ internal class InAppNotificationService<TPerson> : IInAppNotificationService<TPe
     private readonly ILogger<InAppNotificationService<TPerson>> _logger;
     private readonly WebPushSender<TPerson> _webPushSender;
 
-    ///
+    /// <summary>
+    ///     Constructs a new <see cref="InAppNotificationService{TPerson}" />.
+    /// </summary>
     public InAppNotificationService(
         IWebNotificationContext<TPerson> db,
         IHubContext<NotificationHub, INotificationHubClient> hub,

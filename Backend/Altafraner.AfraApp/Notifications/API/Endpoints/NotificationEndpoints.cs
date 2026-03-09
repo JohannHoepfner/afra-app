@@ -19,8 +19,6 @@ public static class NotificationEndpoints
     {
         var group = app.MapGroup("/api/notifications").RequireAuthorization();
 
-        // -- Notification listing and management --
-
         group.MapGet("", async (IInAppNotificationService<Person> svc, UserAccessor userAccessor) =>
         {
             var userId = userAccessor.GetUserId();
@@ -60,8 +58,6 @@ public static class NotificationEndpoints
                 return Results.NotFound();
             }
         });
-
-        // -- Notification settings --
 
         group.MapGet("settings",
             async (UserAccessor userAccessor, AfraAppContext db) =>
