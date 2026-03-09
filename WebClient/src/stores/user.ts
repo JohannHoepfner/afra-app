@@ -17,6 +17,8 @@ export const useUser = defineStore('user', {
         isProfundumsverantwortlich: (state) =>
             state.user.berechtigungen.includes('Profundumsverantwortlich'),
         isAdmin: (state) => state.user.berechtigungen.includes('Admin'),
+        isSekretariat: (state) => state.user.berechtigungen.includes('Sekretariat'),
+        isSchulleiter: (state) => state.user.berechtigungen.includes('Schulleiter'),
         isImpersonating: (state) => state.user?.impersonationId != null,
     },
     actions: {
