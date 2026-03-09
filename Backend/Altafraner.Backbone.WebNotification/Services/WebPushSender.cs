@@ -152,8 +152,6 @@ internal sealed class WebPushSender<TPerson> where TPerson : class, IWebNotifica
         return $"{header}.{payload}.{Base64UrlEncode(signature)}";
     }
 
-    // ── aes128gcm payload encryption  (RFC 8188 § 2 + RFC 8291 § 3) ─────────
-
     private static byte[] EncryptPayload(byte[] plaintext, byte[] uaPublicKey, byte[] authSecret)
     {
         const int rs = 4096;
@@ -181,9 +179,7 @@ internal sealed class WebPushSender<TPerson> where TPerson : class, IWebNotifica
 
         var sharedSecret = asKey.DeriveRawSecretAgreement(uaDh.PublicKey);
 
-        // 4. Derive IKM per RFC 8291 § 3.3.
-        //    key_info = "WebPush: info" || 0x00 || ua_public(65) || as_public(65)
-        var prefix = "WebPush: info\0"u8.ToArray(); // 14 bytes incl. NUL
+        var prefix = "WebPush: info\0"u8.ToArray();
         var keyInfo = new byte[prefix.Length + 65 + 65];
         prefix.CopyTo(keyInfo.AsSpan());
         uaPublicKey.CopyTo(keyInfo.AsSpan(prefix.Length));
@@ -217,7 +213,7 @@ internal sealed class WebPushSender<TPerson> where TPerson : class, IWebNotifica
         header[17] = unchecked((byte)(rs >> 16));
         header[18] = unchecked((byte)(rs >> 8));
         header[19] = unchecked((byte)rs);
-        header[20] = 65; // key id length = uncompressed P-256 point
+        header[20] = 65;
         asPublicKey.CopyTo(header[21..]);
 
         var result = new byte[header.Length + ciphertext.Length + tag.Length];

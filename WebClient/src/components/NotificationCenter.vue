@@ -86,7 +86,11 @@ onUnmounted(() => {
                 v-for="n in store.notifications"
                 :key="n.id"
                 class="p-3 rounded-md cursor-pointer transition-colors"
-                :class="n.isRead ? 'bg-surface-100 dark:bg-surface-800' : 'bg-primary-50 dark:bg-primary-950'"
+                :class="
+                    n.isRead
+                        ? 'bg-surface-100 dark:bg-surface-800'
+                        : 'bg-primary-50 dark:bg-primary-950'
+                "
                 @click="markRead(n)"
             >
                 <div class="flex justify-between items-start gap-2">
@@ -106,10 +110,14 @@ onUnmounted(() => {
                         @click.stop="dismiss(n)"
                     />
                 </div>
-                <p class="text-sm text-surface-600 dark:text-surface-400 mt-1 mb-0 whitespace-pre-wrap">
+                <p
+                    class="text-sm text-surface-600 dark:text-surface-400 mt-1 mb-0 whitespace-pre-wrap"
+                >
                     {{ n.body }}
                 </p>
-                <span class="text-xs text-surface-400 mt-1 block">{{ formatDate(n.createdAt) }}</span>
+                <span class="text-xs text-surface-400 mt-1 block">{{
+                    formatDate(n.createdAt)
+                }}</span>
             </li>
         </ul>
     </Popover>

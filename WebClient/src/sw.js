@@ -2,20 +2,16 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
-// Precache all assets injected by vite-plugin-pwa.
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Clean up old caches on activate.
 cleanupOutdatedCaches();
 
-// Fall back to index.html for navigation requests (SPA), but skip API calls.
 registerRoute(
     new NavigationRoute(new NetworkFirst(), {
         denylist: [/^\/api/],
     }),
 );
 
-// Handle incoming Web Push messages and show a system notification.
 self.addEventListener('push', (event) => {
     let title = 'Afra-App';
     let body = 'Neue Benachrichtigung';
@@ -39,14 +35,15 @@ self.addEventListener('push', (event) => {
     );
 });
 
-// When the user taps the system notification, focus / open the app.
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     event.waitUntil(
         clients
             .matchAll({ type: 'window', includeUncontrolled: true })
             .then((windowClients) => {
-                const existing = windowClients.find((c) => c.url.startsWith(self.location.origin));
+                const existing = windowClients.find((c) =>
+                    c.url.startsWith(self.location.origin),
+                );
                 if (existing) return existing.focus();
                 return clients.openWindow('/');
             }),

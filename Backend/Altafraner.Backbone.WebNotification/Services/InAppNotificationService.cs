@@ -51,7 +51,6 @@ internal class InAppNotificationService<TPerson> : IInAppNotificationService<TPe
             throw new InvalidOperationException("The supplied database does not support this operation.");
         await contextActions.SaveChangesAsync();
 
-        // Push real-time update via SignalR to all connections of this user.
         await _hub.Clients.User(recipientId.ToString())
             .ReceiveNotification(new NotificationHubClient.NewNotification(
                 notification.Id,
@@ -59,7 +58,6 @@ internal class InAppNotificationService<TPerson> : IInAppNotificationService<TPe
                 notification.Body,
                 notification.CreatedAt));
 
-        // Send Web Push if the user has registered subscriptions.
         await TrySendPushAsync(recipientId, subject, body);
     }
 
@@ -102,7 +100,6 @@ internal class InAppNotificationService<TPerson> : IInAppNotificationService<TPe
         var existing = await _dbContext.PushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == endpoint);
         if (existing is not null)
         {
-            // Update the keys in case they changed.
             existing.P256dh = p256dh;
             existing.Auth = auth;
             existing.PersonId = userId;

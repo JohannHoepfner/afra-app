@@ -91,7 +91,6 @@ const copy = async (text) => {
     }
 };
 
-// ── Notification settings ──────────────────────────────────────────────────
 const notifStore = useNotifications();
 const pushHelper = usePushNotifications();
 
@@ -112,7 +111,9 @@ async function loadNotifSettings() {
 async function saveNotifSettings() {
     notifSettingsLoading.value = true;
     try {
-        await notifStore.saveSettings({ receiveEmailNotifications: receiveEmailNotifications.value });
+        await notifStore.saveSettings({
+            receiveEmailNotifications: receiveEmailNotifications.value,
+        });
         toast.add({
             severity: 'success',
             summary: 'Gespeichert',
@@ -140,12 +141,20 @@ async function togglePush() {
         if (pushSubscribed.value) {
             await pushHelper.unsubscribe();
             pushSubscribed.value = false;
-            toast.add({ severity: 'info', summary: 'Push-Benachrichtigungen deaktiviert', life: 2000 });
+            toast.add({
+                severity: 'info',
+                summary: 'Push-Benachrichtigungen deaktiviert',
+                life: 2000,
+            });
         } else {
             const sub = await pushHelper.subscribe();
             if (sub) {
                 pushSubscribed.value = true;
-                toast.add({ severity: 'success', summary: 'Push-Benachrichtigungen aktiviert', life: 2000 });
+                toast.add({
+                    severity: 'success',
+                    summary: 'Push-Benachrichtigungen aktiviert',
+                    life: 2000,
+                });
             } else if (pushHelper.getPermission() === 'denied') {
                 toast.add({
                     severity: 'warn',
@@ -175,7 +184,10 @@ async function sendTestNotification() {
         });
     } catch (e) {
         console.error(e);
-        toast.add({ severity: 'error', summary: 'Fehler beim Senden der Testbenachrichtigung' });
+        toast.add({
+            severity: 'error',
+            summary: 'Fehler beim Senden der Testbenachrichtigung',
+        });
     } finally {
         testLoading.value = false;
     }
@@ -294,4 +306,3 @@ const navItems = [
 </template>
 
 <style scoped></style>
-

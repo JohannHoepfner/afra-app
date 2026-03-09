@@ -44,7 +44,6 @@ export const useNotifications = defineStore('notifications', {
             await Promise.all(unread.map((n) => this.markAsRead(n.id)));
         },
 
-        /** Connect to the SignalR hub and receive real-time notification pushes. */
         connectHub() {
             if (this._connection) return;
 
@@ -80,8 +79,6 @@ export const useNotifications = defineStore('notifications', {
             await api.post('');
         },
 
-        // ── Notification settings ──────────────────────────────────────────────
-
         async fetchSettings() {
             const api = mande('/api/notifications/settings');
             return await api.get('');
@@ -91,8 +88,6 @@ export const useNotifications = defineStore('notifications', {
             const api = mande('/api/notifications/settings');
             await api.put('', settings);
         },
-
-        // ── Web Push ───────────────────────────────────────────────────────────
 
         async getVapidPublicKey() {
             try {
