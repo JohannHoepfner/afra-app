@@ -70,10 +70,10 @@ public class UserModule : IModule
                     return;
                 }
 
-                // Look up the user by full e-mail match first, then by username prefix.
-                var person = await db.Personen.FirstOrDefaultAsync(u => u.Email == identifierValue)
-                             ?? await db.Personen.FirstOrDefaultAsync(
-                                 u => u.Email.StartsWith(identifierValue + "@"));
+                // Look up the user: exact e-mail match or username-prefix match (user@domain).
+                var person = await db.Personen.FirstOrDefaultAsync(u =>
+                    u.Email == identifierValue ||
+                    u.Email.StartsWith(identifierValue + "@"));
 
                 if (person is null)
                 {
