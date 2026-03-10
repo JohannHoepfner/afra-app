@@ -99,11 +99,12 @@ public class UserSigninService
     }
 
     /// <summary>
-    ///     Generates a <see cref="ClaimsPrincipal" /> for the given <see cref="Person" />
+    ///     Generates the AfraApp-specific claims for the given <see cref="Person" />.
+    ///     Called both for local logins and from the OIDC token-validation handler.
     /// </summary>
-    /// <param name="user">The user to generate the <see cref="ClaimsPrincipal" /> for.</param>
-    /// <returns>A <see cref="ClaimsPrincipal" /> for the user</returns>
-    private static List<Claim> GenerateClaims(Models_Person user)
+    /// <param name="user">The user to generate claims for.</param>
+    /// <returns>The list of claims that represent the user's identity inside AfraApp.</returns>
+    public static List<Claim> GenerateClaims(Models_Person user)
     {
         var claims = new List<Claim>
         {

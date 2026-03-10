@@ -1,12 +1,11 @@
 <script lang="ts" setup>
-import { Button, Image, Menubar, useToast } from 'primevue';
+import { Button, Image, Menubar } from 'primevue';
 import type { MenuItem } from 'primevue/menuitem';
 import { computed } from 'vue';
 
 import wappenLight from '/vdaa/favicon.svg?url';
 import wappenDark from '/vdaa/favicon-dark.svg?url';
 import { useUser } from '@/stores/user';
-import { useRouter } from 'vue-router';
 import { isDark } from '@/helpers/isdark';
 
 type GlobalPermissions = 'Otiumsverantwortlich' | 'Profundumsverantwortlich' | 'Admin';
@@ -150,28 +149,10 @@ const all_items: MenuItemWithCondition[] = [
     },
 ];
 
-const toast = useToast();
-const router = useRouter();
 const user = useUser();
 
-const logout = async () => {
-    const user = useUser();
-    try {
-        await user.logout();
-        await router.push('/');
-        toast.add({
-            severity: 'success',
-            summary: 'Abgemeldet!',
-            detail: 'Sie wurden erfolgreich abgemeldet.',
-            life: 3000,
-        });
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Fehler!',
-            detail: 'Sie konnten nicht abgemeldet werden.',
-        });
-    }
+const logout = () => {
+    user.logout();
 };
 
 function evaluateCondition(item: MenuItemWithCondition): boolean {

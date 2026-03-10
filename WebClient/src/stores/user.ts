@@ -42,10 +42,15 @@ export const useUser = defineStore('user', {
         },
 
         async logout() {
-            const logoutUser = mande('/api/user/logout');
-            await logoutUser.get();
+            // Clear local state immediately so no stale data is visible while the browser
+            // navigates away. The page will reload after the logout redirect anyway, but
+            // resetting here is an additional safeguard.
             this.loggedIn = false;
             this.user = null;
+            // Navigate the browser to the logout endpoint so that OIDC end-session redirects
+            // (if OIDC is enabled) are handled correctly. The server clears the local cookie and
+            // then either redirects to Keycloak or returns 200 which reloads the SPA.
+            window.location.href = '/api/user/logout';
         },
     },
 });
