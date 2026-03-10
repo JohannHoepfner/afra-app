@@ -16,6 +16,7 @@ using Altafraner.Backbone.Defaults;
 using Altafraner.Backbone.EmailOutbox;
 using Altafraner.Backbone.EmailSchedulingModule;
 using Altafraner.Backbone.Scheduling;
+using Altafraner.Backbone.OidcAuthentication;
 using Microsoft.AspNetCore.Diagnostics;
 
 CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfoByIetfLanguageTag("de-DE");
@@ -34,6 +35,7 @@ builder.UseAltafranerBackbone(configure: altafranerBuilder => altafranerBuilder
     .AddModule<EmergencyBackupModule>()
 // Backbone modules
     .AddModule<CookieAuthenticationModule>()
+    .AddModule<OidcAuthenticationModule>()
     .AddModule<DataProtectionModule<AfraAppContext>>()
     .AddModule<EmailOutboxModule>()
     .AddModuleAndConfigure<EmailSchedulingModule<Person>, EmailSchedulingSettings<Person>>(settings =>

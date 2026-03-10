@@ -42,10 +42,10 @@ export const useUser = defineStore('user', {
         },
 
         async logout() {
-            const logoutUser = mande('/api/user/logout');
-            await logoutUser.get();
-            this.loggedIn = false;
-            this.user = null;
+            // Navigate the browser to the logout endpoint so that OIDC end-session redirects
+            // (if OIDC is enabled) are handled correctly. The server clears the local cookie and
+            // then either redirects to Keycloak or returns 200.
+            window.location.href = '/api/user/logout';
         },
     },
 });
